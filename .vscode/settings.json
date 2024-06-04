@@ -1,0 +1,6 @@
+{
+  "cmake.sourceDirectory": "${workspaceFolder}",
+  "cmake.configureOnOpen": true,
+  "nixEnvSelector.nixFile": "${workspaceFolder}/default.nix"
+}
+
