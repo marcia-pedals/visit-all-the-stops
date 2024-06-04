@@ -5,5 +5,6 @@ pkgs.mkShell {
     pkgs.gcc
     pkgs.cmake
     pkgs.ninja
+    pkgs.gtest
   ];
 }
