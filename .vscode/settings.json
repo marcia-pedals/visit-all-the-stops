@@ -1,6 +1,11 @@
 {
   "cmake.sourceDirectory": "${workspaceFolder}",
   "cmake.configureOnOpen": true,
-  "nixEnvSelector.nixFile": "${workspaceFolder}/default.nix"
+  "nixEnvSelector.nixFile": "${workspaceFolder}/default.nix",
+  "editor.tabSize": 2,
+  "files.associations": {
+    "iterator": "cpp",
+    "algorithm": "cpp"
+  }
 }
 

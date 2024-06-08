@@ -1,7 +1,9 @@
 #include <iostream>
+#include <numeric>
+
+#include "MultiSegment.h"
+#include <unordered_set>
 
 int main() {
-    std::cout << "Hello, World!" << std::endl;
-    return 0;
+  Range r1(1, 10, 1);
 }
-
