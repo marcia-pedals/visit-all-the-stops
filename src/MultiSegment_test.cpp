@@ -95,6 +95,60 @@ TEST(MultiSegmentTest, naiveComputeMinimalConnections_example) {
   EXPECT_EQ(naiveComputeMinimalConnections(a, b), expected);
 }
 
+RC_GTEST_PROP(
+  MultiSegmentTest,
+  smarterComputeMinimalConnections_sameAsNaive,
+  (const Range& a, const Range& b)
+) {
+  auto result = smarterComputeMinimalConnections(a, b);
+  auto expected = naiveComputeMinimalConnections(a, b);
+  RC_ASSERT(result == expected);
+}
+
+RC_GTEST_PROP(
+  MultiSegmentTest,
+  bestComputeMinimalConnections_sameAsNaive,
+  (const Range& a, const Range& b)
+) {
+  auto result = computeMinimalConnections(a, b);
+  std::vector<std::tuple<unsigned int, unsigned int>> expanded_result;
+  for (const auto& [range, offset] : result) {
+    for (const unsigned int ai : range) {
+      expanded_result.push_back(std::make_tuple(ai, ai + offset));
+    }
+  }
+  std::sort(expanded_result.begin(), expanded_result.end());
+
+  auto expected = naiveComputeMinimalConnections(a, b);
+  RC_ASSERT(expanded_result == expected);
+}
+
+RC_GTEST_PROP(
+  MultiSegmentTest,
+  bestComputeMinimalConnections_uniformlyoffset,
+  ()
+) {
+  Range a = *rc::gen::suchThat<Range>([](const Range& r) { return r.interval > 0; });
+  unsigned int offset = *rc::gen::inRange<unsigned int>(0, a.interval);
+  Range b = Range(a.start + offset, a.finish + offset, a.interval);
+  auto result = computeMinimalConnections(a, b);
+  std::vector<std::tuple<Range, unsigned int>> expected;
+  expected.push_back(std::make_tuple(Range(a.start, a.finish, a.interval), offset));
+  RC_ASSERT(result == expected);
+}
+
+TEST(MultiSegmentTest, bestComputeMinimalConnections_example) {
+  Range a(0, 50, 5);
+  Range b(10, 80, 7);
+  std::vector<std::tuple<Range, unsigned int>> expected;
+  expected.push_back(std::make_tuple(Range(10, 45, 35), 0));
+  expected.push_back(std::make_tuple(Range(15, 50, 35), 2));
+  expected.push_back(std::make_tuple(Range(20, 20, 0), 4));
+  expected.push_back(std::make_tuple(Range(30, 30, 0), 1));
+  expected.push_back(std::make_tuple(Range(35, 35, 0), 3));
+  EXPECT_EQ(computeMinimalConnections(a, b), expected);
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

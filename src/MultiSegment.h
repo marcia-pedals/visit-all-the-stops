@@ -19,6 +19,7 @@ struct Range {
     : start(start), finish(finish), interval(interval) {
       assert(finish >= start);
       assert(finish == start || (interval > 0 && (finish - start) % interval == 0));
+      assert(finish > start || interval == 0);
     }
 
   friend auto operator<=>(const Range&, const Range&) = default;
@@ -102,7 +103,7 @@ namespace rc {
           if (interval == 0) {
             return gen::just(Range(start, start, interval));
           }
-          return gen::map(gen::inRange<unsigned int>(0, 20).as("repeats"), [start, interval](unsigned int repeats) {
+          return gen::map(gen::inRange<unsigned int>(1, 20).as("repeats"), [start, interval](unsigned int repeats) {
             return Range(start, start + interval * repeats, interval);
           });
         });
@@ -120,4 +121,19 @@ namespace rc {
 // - bj is the smallest element in b that is >= ai
 //
 // Returns all minimal connections.
+//
+// This is a naive implementation that is quadratic in the number of elements in a and b.
 std::vector<std::tuple<unsigned int, unsigned int>> naiveComputeMinimalConnections(const Range& a, const Range& b);
+
+// Returns all minimal connections.
+//
+// This is a smarter implementation that is linear in the number of elements in a and b.
+std::vector<std::tuple<unsigned int, unsigned int>> smarterComputeMinimalConnections(const Range& a, const Range& b);
+
+// Returns all minimal connections.
+//
+// The tuple's first element is a Range of elements from a, and the second element is an offset to
+// get the corresponding connecting element in b.
+//
+// This is the most efficient implementation.
+std::vector<std::tuple<Range, unsigned int>> computeMinimalConnections(Range a, Range b);
