@@ -5,7 +5,10 @@
   "editor.tabSize": 2,
   "files.associations": {
     "iterator": "cpp",
-    "algorithm": "cpp"
+    "algorithm": "cpp",
+    "unordered_set": "cpp",
+    "utility": "cpp",
+    "vector": "cpp"
   }
 }
 

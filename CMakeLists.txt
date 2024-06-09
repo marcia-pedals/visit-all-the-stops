@@ -14,17 +14,23 @@ include_directories(${Boost_INCLUDE_DIRS})
 set(RC_ENABLE_GTEST ON CACHE BOOL "Enable GTest integration for RapidCheck")
 
 add_subdirectory(third_party/rapidcheck)
-
 include_directories(third_party/rapidcheck/include)
 include_directories(third_party/rapidcheck/extras/gtest/include)
+
+add_subdirectory(third_party/csv-parser)
+include_directories(third_party/csv-parser/single_include)
 
 # MultiSegment
 add_library(MultiSegment src/MultiSegment.cpp)
 target_link_libraries(MultiSegment ${Boost_LIBRARIES})
 
+# World
+add_library(World src/World.cpp)
+target_link_libraries(World MultiSegment csv)
+
 # Add executable for the main program
 add_executable(hello src/main.cpp)
-target_link_libraries(hello MultiSegment)
+target_link_libraries(hello MultiSegment World)
 
 
 # Enable testing
