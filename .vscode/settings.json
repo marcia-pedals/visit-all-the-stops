@@ -8,7 +8,9 @@
     "algorithm": "cpp",
     "unordered_set": "cpp",
     "utility": "cpp",
-    "vector": "cpp"
+    "vector": "cpp",
+    "chrono": "cpp",
+    "iomanip": "cpp"
   }
 }
 

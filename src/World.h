@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -41,6 +42,13 @@ struct World {
   std::vector<WorldSegment> segments;
 };
 
+std::optional<std::string> readServiceIds(
+  const std::string& directory,
+  const std::string& id_prefix,
+  const std::chrono::year_month_day& date,
+  std::unordered_set<std::string>& service_ids
+);
+
 // Adds the GTFS data at `directory` to `world`.
 //
 // All GTFS IDs are prefixed with `id_prefix`.
@@ -53,10 +61,11 @@ struct World {
 std::optional<std::string> readGTFSToWorld(
   const std::string& directory,
   const std::string& id_prefix,
+  const std::chrono::year_month_day& date,
   const std::unordered_set<std::string>& segment_stop_ids,
   World& world
 );
 
 void printStops(std::ostream& os, const World& world);
 void printRoutes(std::ostream& os, const World& world);
-void printSegmentsFrom(std::ostream& os, const World& world, const std::string& stop_id);
+void printDepartureTable(std::ostream& os, const World& world, const std::string& stop_id);

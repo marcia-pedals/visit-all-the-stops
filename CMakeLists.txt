@@ -1,8 +1,9 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
 project(VisitAllTheStops)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 message(STATUS "BOOST_ROOT: $ENV{BOOST_ROOT}")
 set(BOOST_ROOT $ENV{BOOST_ROOT})
@@ -58,3 +59,10 @@ target_link_libraries(MultiSegment_test MultiSegment)
 target_link_libraries(MultiSegment_test rapidcheck)
 add_test(NAME MultiSegment_test COMMAND MultiSegment_test)
 set_tests_properties(MultiSegment_test PROPERTIES ENVIRONMENT "RC_PARAMS=max_success=10000")
+
+# World test
+add_executable(World_test src/World_test.cpp)
+target_link_libraries(World_test gtest_main)
+target_link_libraries(World_test World)
+add_test(NAME World_test COMMAND World_test)
+set_tests_properties(World_test PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

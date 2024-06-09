@@ -1,5 +1,7 @@
 #include "World.h"
 
+#include <chrono>
+
 #include "csv.hpp"
 
 static std::optional<unsigned int> parseGTFSTime(const std::string& time) {
@@ -11,6 +13,14 @@ static std::optional<unsigned int> parseGTFSTime(const std::string& time) {
   unsigned int minutes = std::stoi(time.substr(3, 2));
   unsigned int seconds = std::stoi(time.substr(6, 2));
   return hours * 60 + minutes;
+}
+
+static std::chrono::year_month_day parseGTFSDay(const std::string& day) {
+  // TODO: Some error handling??
+  int year = std::stoi(day.substr(0, 4));
+  unsigned int month = std::stoi(day.substr(4, 2));
+  unsigned int day_of_month = std::stoi(day.substr(6, 2));
+  return std::chrono::year_month_day{std::chrono::year{year}, std::chrono::month{month}, std::chrono::day{day_of_month}};
 }
 
 static std::string minutesToHuman(unsigned int minutes) {
@@ -53,6 +63,7 @@ static std::vector<WorldSegment> mergeSegments(const std::vector<WorldSegment>& 
       result.push_back(segment);
     }
   }
+  result = mergeSegments(result);
   result.insert(
     result.begin(),
     WorldSegment{
@@ -67,12 +78,84 @@ static std::vector<WorldSegment> mergeSegments(const std::vector<WorldSegment>& 
   return result;
 }
 
+std::optional<std::string> readServiceIds(
+  const std::string& directory,
+  const std::string& id_prefix,
+  const std::chrono::year_month_day& date,
+  std::unordered_set<std::string>& service_ids
+) {
+  // Figure out the services to load based on the calendars.
+  std::string weekday;
+  switch (std::chrono::weekday{date}.c_encoding()) {
+    case 0:
+      weekday = "sunday";
+      break;
+    case 1:
+      weekday = "monday";
+      break;
+    case 2:
+      weekday = "tuesday";
+      break;
+    case 3:
+      weekday = "wednesday";
+      break;
+    case 4:
+      weekday = "thursday";
+      break;
+    case 5:
+      weekday = "friday";
+      break;
+    case 6:
+      weekday = "saturday";
+      break;
+  }
+  csv::CSVReader calendar_reader(directory + "/calendar.txt");
+  for (const csv::CSVRow& row : calendar_reader) {
+    std::string service_id = id_prefix + row["service_id"].get<>();
+    std::string start_date_raw = row["start_date"].get<>();
+    std::string end_date_raw = row["end_date"].get<>();
+    std::chrono::year_month_day start_date = parseGTFSDay(start_date_raw);
+    std::chrono::year_month_day end_date = parseGTFSDay(end_date_raw);
+    if (date >= start_date && date <= end_date && row[weekday].get<>() == "1") {
+      service_ids.insert(service_id);
+    }
+  }
+  csv::CSVReader calendar_dates_reader(directory + "/calendar_dates.txt");
+  for (const csv::CSVRow& row : calendar_dates_reader) {
+    std::string service_id = id_prefix + row["service_id"].get<>();
+    std::string exception_date_raw = row["date"].get<>();
+    std::chrono::year_month_day exception_date = parseGTFSDay(exception_date_raw);
+    if (exception_date != date) {
+      continue;
+    }
+    if (row["exception_type"].get<>() == "2") {
+      if (service_ids.contains(service_id)) {
+        service_ids.erase(service_id);
+      }
+    } else if (row["exception_type"].get<>() == "1") {
+      if (!service_ids.contains(service_id)) {
+        service_ids.insert(service_id);
+      }
+    } else {
+      return "Unknown exception type in calendar_dates.txt: " + row["exception_type"].get<>();
+    }
+  }
+  return std::nullopt;
+}
+
 std::optional<std::string> readGTFSToWorld(
   const std::string& directory,
   const std::string& id_prefix,
+  const std::chrono::year_month_day& date,
   const std::unordered_set<std::string>& segment_stop_ids,
   World& world
 ) {
+  std::unordered_set<std::string> service_ids;
+  auto service_ids_err = readServiceIds(directory, id_prefix, date, service_ids);
+  if (service_ids_err.has_value()) {
+    return service_ids_err;
+  }
+
   // Load routes.
   csv::CSVReader routes_reader(directory + "/routes.txt");
   for (const csv::CSVRow& row : routes_reader) {
@@ -114,10 +197,9 @@ std::optional<std::string> readGTFSToWorld(
   }
 
   // Load trips.
-  std::string current_service_id = "2024_01_15-DX-MVS-Weekday-01";  // TODO: Determine based on date.
   csv::CSVReader trips_reader(directory + "/trips.txt");
   for (const csv::CSVRow& row : trips_reader) {
-    if (row["service_id"].get<>() != current_service_id) {
+    if (!service_ids.contains(id_prefix + row["service_id"].get<>())) {
       continue;
     }
     std::string trip_id = id_prefix + row["trip_id"].get<>();
@@ -204,11 +286,9 @@ std::optional<std::string> readGTFSToWorld(
       prev = stop_time;
     }
   }
-  std::cout << "Singular segments: " << singular_segments.size() << "\n";
   
   // Then try to merge singular segments.
   for (const auto& entry : singular_segments) {
-    std::cout << std::get<0>(entry.first) << " " << std::get<1>(entry.first) << ": " << entry.second.size() << "\n";
     const auto& segments = entry.second;
     const auto merged = mergeSegments(segments);
     world.segments.insert(world.segments.end(), merged.begin(), merged.end());
@@ -231,10 +311,25 @@ void printRoutes(std::ostream& os, const World& world) {
   }
 }
 
-void printSegmentsFrom(std::ostream& os, const World& world, const std::string& stop_id) {
+void printDepartureTable(std::ostream& os, const World& world, const std::string& stop_id) {
+  os << "Departure table for " << world.stops.at(stop_id).name << "\n";
+  std::map<std::string, std::vector<WorldSegment>> segments_by_route;
   for (const auto& segment: world.segments) {
     if (segment.origin_stop_id == stop_id) {
-      os << humanRange(segment.departures) << ": " << segment.origin_stop_id << " -> " << segment.destination_stop_id << " (" << segment.route_id << ")\n";
+      segments_by_route[segment.route_id].push_back(segment);
+    }
+  }
+  for (auto& entry : segments_by_route) {
+    const auto& route_id = entry.first;
+    auto& segments = entry.second;
+    std::sort(segments.begin(), segments.end(), [](const WorldSegment& a, const WorldSegment& b) {
+      return a.departures.start < b.departures.start;
+    });
+    os << "  " << world.routes.at(route_id).name << ":\n";
+    for (const auto& segment: segments) {
+      os << "    "
+        << std::left << std::setfill(' ') << std::setw(40) << humanRange(segment.departures)
+        << " (arr " << world.stops.at(segment.destination_stop_id).name << " in " << segment.duration << " mins)\n";
     }
   }
 }
