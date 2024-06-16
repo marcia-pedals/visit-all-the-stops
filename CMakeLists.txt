@@ -27,7 +27,7 @@ add_library(MultiSegment src/MultiSegment.cpp)
 
 # World
 add_library(World src/World.cpp)
-target_link_libraries(World MultiSegment absl::strings csv)
+target_link_libraries(World MultiSegment absl::strings absl::time csv)
 
 # Add executable for the main program
 add_executable(hello src/main.cpp)

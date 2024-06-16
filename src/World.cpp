@@ -1,11 +1,13 @@
 #include "World.h"
 
-#include <chrono>
+#include <sstream>
 #include <variant>
 
+#include "absl/strings/ascii.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/numbers.h"
+#include "absl/time/civil_time.h"
 
 #include "csv.hpp"
 
@@ -28,12 +30,20 @@ static std::variant<std::optional<unsigned int>, std::string> parseGTFSTime(absl
   return hours * 60 + minutes;  // TODO: Handle seconds?
 }
 
-static std::chrono::year_month_day parseGTFSDay(const std::string& day) {
-  // TODO: Some error handling??
-  int year = std::stoi(day.substr(0, 4));
-  unsigned int month = std::stoi(day.substr(4, 2));
-  unsigned int day_of_month = std::stoi(day.substr(6, 2));
-  return std::chrono::year_month_day{std::chrono::year{year}, std::chrono::month{month}, std::chrono::day{day_of_month}};
+// Parses a required GTFS day, which is a string of the form "YYYYMMDD".
+static std::variant<absl::CivilDay, std::string> parseGTFSDay(absl::string_view day) {
+  if (day.size() != 8) {
+    return absl::StrCat("Invalid day: ", day);
+  }
+  unsigned int year = 0, month = 0, day_of_month = 0;
+  bool success = true;
+  success &= absl::SimpleAtoi(day.substr(0, 4), &year);
+  success &= absl::SimpleAtoi(day.substr(4, 2), &month);
+  success &= absl::SimpleAtoi(day.substr(6, 2), &day_of_month);
+  if (!success) {
+    return absl::StrCat("Invalid day: ", day);
+  }
+  return absl::CivilDay(year, month, day_of_month);
 }
 
 static std::string minutesToHuman(unsigned int minutes) {
@@ -47,41 +57,28 @@ static std::string minutesToHuman(unsigned int minutes) {
 std::optional<std::string> readServiceIds(
   const std::string& directory,
   const std::string& id_prefix,
-  const std::chrono::year_month_day& date,
+  absl::CivilDay date,
   std::unordered_set<std::string>& service_ids
 ) {
   // Figure out the services to load based on the calendars.
-  std::string weekday;
-  switch (std::chrono::weekday{date}.c_encoding()) {
-    case 0:
-      weekday = "sunday";
-      break;
-    case 1:
-      weekday = "monday";
-      break;
-    case 2:
-      weekday = "tuesday";
-      break;
-    case 3:
-      weekday = "wednesday";
-      break;
-    case 4:
-      weekday = "thursday";
-      break;
-    case 5:
-      weekday = "friday";
-      break;
-    case 6:
-      weekday = "saturday";
-      break;
-  }
+  std::ostringstream weekday_stream;
+  weekday_stream << absl::GetWeekday(date);
+  std::string weekday = absl::AsciiStrToLower(weekday_stream.str());
   csv::CSVReader calendar_reader(directory + "/calendar.txt");
   for (const csv::CSVRow& row : calendar_reader) {
     std::string service_id = id_prefix + row["service_id"].get<>();
     std::string start_date_raw = row["start_date"].get<>();
     std::string end_date_raw = row["end_date"].get<>();
-    std::chrono::year_month_day start_date = parseGTFSDay(start_date_raw);
-    std::chrono::year_month_day end_date = parseGTFSDay(end_date_raw);
+    auto start_date_or = parseGTFSDay(start_date_raw);
+    if (std::holds_alternative<std::string>(start_date_or)) {
+      return std::get<1>(start_date_or);
+    }
+    absl::CivilDay start_date = std::get<0>(start_date_or);
+    auto end_date_or = parseGTFSDay(end_date_raw);
+    if (std::holds_alternative<std::string>(end_date_or)) {
+      return std::get<1>(end_date_or);
+    }
+    absl::CivilDay end_date = std::get<0>(end_date_or);
     if (date >= start_date && date <= end_date && row[weekday].get<>() == "1") {
       service_ids.insert(service_id);
     }
@@ -90,7 +87,11 @@ std::optional<std::string> readServiceIds(
   for (const csv::CSVRow& row : calendar_dates_reader) {
     std::string service_id = id_prefix + row["service_id"].get<>();
     std::string exception_date_raw = row["date"].get<>();
-    std::chrono::year_month_day exception_date = parseGTFSDay(exception_date_raw);
+    auto exception_date_or = parseGTFSDay(exception_date_raw);
+    if (std::holds_alternative<std::string>(exception_date_or)) {
+      return std::get<1>(exception_date_or);
+    }
+    absl::CivilDay exception_date = std::get<0>(exception_date_or);
     if (exception_date != date) {
       continue;
     }
@@ -112,7 +113,7 @@ std::optional<std::string> readServiceIds(
 std::optional<std::string> readGTFSToWorld(
   const std::string& directory,
   const std::string& id_prefix,
-  const std::chrono::year_month_day& date,
+  absl::CivilDay date,
   const std::unordered_set<std::string>& segment_stop_ids,
   World& world
 ) {

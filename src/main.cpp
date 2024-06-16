@@ -1,4 +1,3 @@
-#include <chrono>
 #include <iostream>
 #include <numeric>
 
@@ -6,12 +5,10 @@
 #include "World.h"
 #include <unordered_set>
 
+#include "absl/time/civil_time.h"
+
 int main() {
-  auto date = std::chrono::year_month_day{
-    std::chrono::year{2024},
-    std::chrono::month{5},
-    std::chrono::day{28}
-  };
+  absl::CivilDay date(2024, 5, 28);
   World world;
 
   std::vector<std::string> bart_segment_stop_ids = {

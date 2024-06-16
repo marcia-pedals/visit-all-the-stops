@@ -1,12 +1,13 @@
 #pragma once
 
 #include <algorithm>
-#include <chrono>
 #include <map>
 #include <unordered_set>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "absl/time/civil_time.h"
 
 struct WorldRoute {
   std::string name;
@@ -47,7 +48,7 @@ struct World {
 std::optional<std::string> readServiceIds(
   const std::string& directory,
   const std::string& id_prefix,
-  const std::chrono::year_month_day& date,
+  absl::CivilDay date,
   std::unordered_set<std::string>& service_ids
 );
 
@@ -63,7 +64,7 @@ std::optional<std::string> readServiceIds(
 std::optional<std::string> readGTFSToWorld(
   const std::string& directory,
   const std::string& id_prefix,
-  const std::chrono::year_month_day& date,
+  absl::CivilDay date,
   const std::unordered_set<std::string>& segment_stop_ids,
   World& world
 );

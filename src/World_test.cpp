@@ -18,7 +18,7 @@ static std::vector<std::string> readServiceIdsVec(
   readServiceIds(
     path,
     prefix,
-    std::chrono::year_month_day{std::chrono::year{year}, std::chrono::month{month}, std::chrono::day{day}},
+    absl::CivilDay(year, month, day),
     service_ids
   );
   std::vector<std::string> result(service_ids.begin(), service_ids.end());
