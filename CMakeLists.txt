@@ -5,12 +5,6 @@ project(VisitAllTheStops)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-message(STATUS "BOOST_ROOT: $ENV{BOOST_ROOT}")
-set(BOOST_ROOT $ENV{BOOST_ROOT})
-
-find_package(Boost 1.79.0 REQUIRED COMPONENTS system filesystem)
-include_directories(${Boost_INCLUDE_DIRS})
-
 # Enable GTest integration for RapidCheck
 set(RC_ENABLE_GTEST ON CACHE BOOL "Enable GTest integration for RapidCheck")
 
@@ -21,9 +15,14 @@ include_directories(third_party/rapidcheck/extras/gtest/include)
 add_subdirectory(third_party/csv-parser)
 include_directories(third_party/csv-parser/single_include)
 
+add_subdirectory(third_party/abseil-cpp)
+
+add_subdirectory(third_party/googletest)
+include_directories(third_party/googletest/googlemock/include)
+include_directories(third_party/googletest/googletest/include)
+
 # MultiSegment
 add_library(MultiSegment src/MultiSegment.cpp)
-target_link_libraries(MultiSegment ${Boost_LIBRARIES})
 
 # World
 add_library(World src/World.cpp)
@@ -36,16 +35,6 @@ target_link_libraries(hello MultiSegment World)
 
 # Enable testing
 enable_testing()
-
-# Add Google Test
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/release-1.11.0.tar.gz
-)
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
 
 # Example test
 add_executable(example_test src/main_test.cpp)
@@ -62,7 +51,6 @@ set_tests_properties(MultiSegment_test PROPERTIES ENVIRONMENT "RC_PARAMS=max_suc
 
 # World test
 add_executable(World_test src/World_test.cpp)
-target_link_libraries(World_test gtest_main)
-target_link_libraries(World_test World)
+target_link_libraries(World_test World gtest_main gmock_main)
 add_test(NAME World_test COMMAND World_test)
 set_tests_properties(World_test PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

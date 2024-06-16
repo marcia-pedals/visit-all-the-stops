@@ -5,9 +5,5 @@ pkgs.mkShell {
     pkgs.gcc
     pkgs.cmake
     pkgs.ninja
-    pkgs.boost.dev
   ];
-  shellHook = ''
-    export BOOST_ROOT=${pkgs.boost.dev}
-  '';
 }

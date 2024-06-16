@@ -5,7 +5,6 @@
 #include <iterator>
 #include <ostream>
 
-#include <boost/functional/hash.hpp>
 #include <rapidcheck.h>
 
 // <struct Range>
@@ -77,22 +76,6 @@ struct Range {
 };
 
 std::ostream &operator<<(std::ostream &os, const Range& range);
-
-namespace std
-{
-  template <>
-  struct hash<Range>
-  {
-    std::size_t operator()(const Range& range) const noexcept
-    {
-      std::size_t h = 0;
-      boost::hash_combine(h, range.start);
-      boost::hash_combine(h, range.finish);
-      boost::hash_combine(h, range.interval);
-      return h;
-    }
-  };
-}
 
 namespace rc {
   template <>
