@@ -1,13 +1,15 @@
 route_id,direction_id,direction
-19601,1,South
-19601,0,North
-19600,1,South
-19600,0,North
-19599,1,South
-19599,0,North
-19598,1,South
-19598,0,North
-19597,1,South
-19597,0,North
-12867,1,South
-12867,0,North
+Bus Bridge,1,South
+Bus Bridge,0,North
+L3,0,North
+L3,1,South
+L4,1,South
+L4,0,North
+L5,0,North
+L5,1,South
+L2,1,South
+L2,0,North
+L1,0,North
+L1,1,South
+B7,0,North
+B7,1,South
