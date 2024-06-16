@@ -34,7 +34,7 @@ int main() {
   std::cout << prettyRoutes << "\n";
 
   std::string prettyDepartureTable;
-  world.prettyDepartureTable("bart-place_BALB", std::nullopt, prettyDepartureTable);
+  world.prettyDepartureTable("bart-place_BALB", "Red-N", prettyDepartureTable);
   std::cout << prettyDepartureTable << "\n";
 
   std::vector<std::string> caltrain_segment_stop_ids = {
