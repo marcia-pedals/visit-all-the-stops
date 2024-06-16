@@ -29,23 +29,32 @@ int main() {
     return 1;
   }
 
-  printStops(std::cout, world);
-  printRoutes(std::cout, world);
+  std::string prettyRoutes;
+  world.prettyRoutes(prettyRoutes);
+  std::cout << prettyRoutes << "\n";
 
-  // std::vector<std::string> caltrain_segment_stop_ids = {
-  //   "place_MLBR",
-  //   "sj_diridon",
-  //   "san_francisco",
-  // };
-  // std::unordered_set<std::string> prefixed_caltrain_segment_stop_ids;
-  // for (const std::string& stop_id : caltrain_segment_stop_ids) {
-  //   prefixed_caltrain_segment_stop_ids.insert("caltrain-" + stop_id);
-  // }
-  // const auto err_opt2 = readGTFSToWorld("data/fetched-2024-06-08/caltrain", "caltrain-", date, prefixed_caltrain_segment_stop_ids, world);
-  // if (err_opt2.has_value()) {
-  //   std::cout << err_opt2.value() << "\n";
-  //   return 1;
-  // }
+  std::string prettyDepartureTable;
+  world.prettyDepartureTable("bart-place_BALB", std::nullopt, prettyDepartureTable);
+  std::cout << prettyDepartureTable << "\n";
+
+  std::vector<std::string> caltrain_segment_stop_ids = {
+    "place_MLBR",
+    "sj_diridon",
+    "san_francisco",
+  };
+  std::unordered_set<std::string> prefixed_caltrain_segment_stop_ids;
+  for (const std::string& stop_id : caltrain_segment_stop_ids) {
+    prefixed_caltrain_segment_stop_ids.insert("caltrain-" + stop_id);
+  }
+  const auto err_opt2 = readGTFSToWorld("data/fetched-2024-06-08/caltrain", "caltrain-", date, prefixed_caltrain_segment_stop_ids, world);
+  if (err_opt2.has_value()) {
+    std::cout << err_opt2.value() << "\n";
+    return 1;
+  }
+
+  prettyDepartureTable = "";
+  world.prettyDepartureTable("caltrain-place_MLBR", std::nullopt, prettyDepartureTable);
+  std::cout << prettyDepartureTable << "\n";
 
   // for (const std::string& stop_id : prefixed_bart_segment_stop_ids) {
   //   printDepartureTable(std::cout, world, stop_id);

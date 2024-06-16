@@ -7,7 +7,37 @@
 #include <string>
 #include <vector>
 
+#include "absl/strings/str_format.h"
 #include "absl/time/civil_time.h"
+
+struct WorldTime {
+  // Seconds since beginning of service day.
+  unsigned int seconds;
+
+  WorldTime(unsigned int seconds) : seconds(seconds) {}
+
+  template <typename Sink>
+  friend void AbslStringify(Sink& sink, const WorldTime& time) {
+    // Note: Drops seconds.
+    absl::Format(&sink, "%02u:%02u", time.seconds / 3600, (time.seconds / 60) % 60);
+  }
+};
+
+struct WorldDuration {
+  unsigned int seconds;
+
+  WorldDuration(unsigned int seconds) : seconds(seconds) {}
+
+  template <typename Sink>
+  friend void AbslStringify(Sink& sink, const WorldDuration& duration) {
+    // Note: Drops seconds.
+    if (duration.seconds >= 3600) {
+      absl::Format(&sink, "%02uh%02um", duration.seconds / 3600, (duration.seconds / 60) % 60);
+    } else {
+      absl::Format(&sink, "%02um", duration.seconds / 60);
+    }
+  }
+};
 
 struct WorldRoute {
   std::string name;
@@ -19,8 +49,8 @@ struct WorldStop {
 };
 
 struct WorldSegment {
-  unsigned int departure_time;
-  unsigned int duration;
+  WorldTime departure_time;
+  WorldDuration duration;
 
   std::string origin_stop_id;
   std::string destination_stop_id;
@@ -29,8 +59,8 @@ struct WorldSegment {
 
 struct WorldTripStopTimes {
   std::string stop_id;
-  std::optional<unsigned int> arrival_time;
-  std::optional<unsigned int> departure_time;
+  std::optional<WorldTime> arrival_time;
+  std::optional<WorldTime> departure_time;
 };
 
 struct WorldTrip {
@@ -43,6 +73,9 @@ struct World {
   std::map<std::string, WorldStop> stops;
   std::map<std::string, WorldTrip> trips;
   std::vector<WorldSegment> segments;
+
+  void prettyRoutes(std::string& result) const;
+  void prettyDepartureTable(const std::string& stop_id, const std::optional<std::string>& line_name, std::string& result) const;
 };
 
 std::optional<std::string> readServiceIds(
@@ -68,7 +101,3 @@ std::optional<std::string> readGTFSToWorld(
   const std::unordered_set<std::string>& segment_stop_ids,
   World& world
 );
-
-void printStops(std::ostream& os, const World& world);
-void printRoutes(std::ostream& os, const World& world);
-void printDepartureTable(std::ostream& os, const World& world, const std::string& stop_id);

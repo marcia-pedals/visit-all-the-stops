@@ -12,7 +12,7 @@
 #include "csv.hpp"
 
 // Parses an optional GTFS time, which is a string of the form "HH:MM:SS" or "".
-static std::variant<std::optional<unsigned int>, std::string> parseGTFSTime(absl::string_view time) {
+static std::variant<std::optional<WorldTime>, std::string> parseGTFSTime(absl::string_view time) {
   if (time.empty()) {
     return std::nullopt;
   }
@@ -27,7 +27,7 @@ static std::variant<std::optional<unsigned int>, std::string> parseGTFSTime(absl
   if (!success) {
     return absl::StrCat("Invalid time: ", time);
   }
-  return hours * 60 + minutes;  // TODO: Handle seconds?
+  return WorldTime(hours * 3600 + minutes * 60 + seconds);
 }
 
 // Parses a required GTFS day, which is a string of the form "YYYYMMDD".
@@ -44,14 +44,6 @@ static std::variant<absl::CivilDay, std::string> parseGTFSDay(absl::string_view 
     return absl::StrCat("Invalid day: ", day);
   }
   return absl::CivilDay(year, month, day_of_month);
-}
-
-static std::string minutesToHuman(unsigned int minutes) {
-  unsigned int hours = minutes / 60;
-  minutes %= 60;
-  std::ostringstream oss;
-  oss << std::setfill('0') << std::setw(2) << hours << ":" << std::setfill('0') << std::setw(2) << minutes;
-  return oss.str();
 }
 
 std::optional<std::string> readServiceIds(
@@ -216,10 +208,10 @@ std::optional<std::string> readGTFSToWorld(
   for (auto& entry: world.trips) {
     auto& trip = entry.second;
     std::sort(trip.stop_times.begin(), trip.stop_times.end(), [](const WorldTripStopTimes& a, const WorldTripStopTimes& b) {
-      return a.departure_time.value_or(0) < b.departure_time.value_or(0);
+      return a.departure_time.value_or(WorldTime(0)).seconds < b.departure_time.value_or(WorldTime(0)).seconds;
     });
     bool sorted = std::is_sorted(trip.stop_times.begin(), trip.stop_times.end(), [](const WorldTripStopTimes& a, const WorldTripStopTimes& b) {
-      return a.arrival_time.value_or(0) < b.arrival_time.value_or(0);
+      return a.arrival_time.value_or(WorldTime(0)).seconds < b.arrival_time.value_or(WorldTime(0)).seconds;
     });
     if (!sorted) {
       return "Trip " + entry.first + " has wacky stop times.";
@@ -243,13 +235,13 @@ std::optional<std::string> readGTFSToWorld(
       std::string origin_stop_id = prev->stop_id;
       std::string destination_stop_id = stop_time.stop_id;
       assert(prev->departure_time.has_value());
-      unsigned int departure_time = prev->departure_time.value();
+      WorldTime departure_time = prev->departure_time.value();
       assert(stop_time.arrival_time.has_value());
-      unsigned int arrival_time = stop_time.arrival_time.value();
-      unsigned int duration = arrival_time - departure_time;
+      WorldTime arrival_time = stop_time.arrival_time.value();
+      WorldDuration duration = WorldDuration(arrival_time.seconds - departure_time.seconds);
       world.segments.push_back(WorldSegment{
         .departure_time = departure_time,
-        .duration = arrival_time - departure_time,
+        .duration = duration,
         .origin_stop_id = origin_stop_id,
         .destination_stop_id = destination_stop_id,
         .route_id = trip.route_id
@@ -258,23 +250,52 @@ std::optional<std::string> readGTFSToWorld(
       prev = stop_time;
     }
   }
+  std::sort(world.segments.begin(), world.segments.end(), [](const WorldSegment& a, const WorldSegment& b) {
+    return a.departure_time.seconds < b.departure_time.seconds;
+  });
   
   return std::nullopt;
 }
 
-void printStops(std::ostream& os, const World& world) {
-  for (const auto& entry: world.stops) {
-    const auto& stop = entry.second;
-    os << entry.first << ": " << stop.name << " (" << stop.parent_station_id.value_or("") << ")\n";
+void World::prettyRoutes(std::string& result) const {
+  for (const auto& entry: routes) {
+    const auto& route = entry.second;
+    absl::StrAppend(&result, entry.first, ": ", route.name, "\n");
   }
 }
 
-void printRoutes(std::ostream& os, const World& world) {
-  for (const auto& entry: world.routes) {
-    const auto& route = entry.second;
-    os << entry.first << ": " << route.name << "\n";
+void World::prettyDepartureTable(const std::string& stop_id, const std::optional<std::string>& line_name, std::string& result) const {
+  constexpr const char* table_format = "%-10s %-15s %-40s %-10s\n";
+  absl::StrAppend(&result, "Departure table for ", stops.at(stop_id).name, "\n");
+  absl::StrAppendFormat(&result, table_format, "Time", "Line", "Next Stop", "Next Stop Time");
+  for (const auto& segment : segments) {
+    if (segment.origin_stop_id != stop_id || (line_name.has_value() && routes.at(segment.route_id).name != line_name)) {
+      continue;
+    }
+    absl::StrAppendFormat(
+      &result,
+      table_format,
+      absl::StrCat(segment.departure_time, ""), // TODO: Figure out how to use formatter.
+      routes.at(segment.route_id).name,
+      stops.at(segment.destination_stop_id).name,
+      absl::StrCat(WorldTime(segment.departure_time.seconds + segment.duration.seconds), "") // TODO: Figure out how to use formatter.
+    );
   }
 }
+
+// void printStops(std::ostream& os, const World& world) {
+//   for (const auto& entry: world.stops) {
+//     const auto& stop = entry.second;
+//     os << entry.first << ": " << stop.name << " (" << stop.parent_station_id.value_or("") << ")\n";
+//   }
+// }
+
+// void printRoutes(std::ostream& os, const World& world) {
+//   for (const auto& entry: world.routes) {
+//     const auto& route = entry.second;
+//     os << entry.first << ": " << route.name << "\n";
+//   }
+// }
 
 // void printDepartureTable(std::ostream& os, const World& world, const std::string& stop_id) {
 //   os << "Departure table for " << world.stops.at(stop_id).name << "\n";
