@@ -5,7 +5,6 @@ pkgs.mkShell {
     pkgs.gcc
     pkgs.cmake
     pkgs.ninja
-    pkgs.gtest
     pkgs.boost.dev
   ];
   shellHook = ''
