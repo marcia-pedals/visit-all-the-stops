@@ -6,6 +6,7 @@
 #include "absl/strings/ascii.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_split.h"
 #include "absl/strings/numbers.h"
 #include "absl/time/civil_time.h"
 
@@ -16,14 +17,15 @@ static std::variant<std::optional<WorldTime>, std::string> parseGTFSTime(absl::s
   if (time.empty()) {
     return std::nullopt;
   }
-  if (time.size() != 8 || time[2] != ':' || time[5] != ':') {
+  std::vector<absl::string_view> parts = absl::StrSplit(time, ':');
+  if (parts.size() != 3) {
     return absl::StrCat("Invalid time: ", time);
   }
   bool success = true;
   unsigned int hours = 0, minutes = 0, seconds = 0;
-  success &= absl::SimpleAtoi(time.substr(0, 2), &hours);
-  success &= absl::SimpleAtoi(time.substr(3, 2), &minutes);
-  success &= absl::SimpleAtoi(time.substr(6, 2), &seconds);
+  success &= absl::SimpleAtoi(parts[0], &hours);
+  success &= absl::SimpleAtoi(parts[1], &minutes);
+  success &= absl::SimpleAtoi(parts[2], &seconds);
   if (!success) {
     return absl::StrCat("Invalid time: ", time);
   }
