@@ -1,10 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <chrono>
+#include <map>
+#include <unordered_set>
+#include <optional>
 #include <string>
 #include <vector>
-
-#include "MultiSegment.h"
 
 struct WorldRoute {
   std::string name;
@@ -16,7 +18,7 @@ struct WorldStop {
 };
 
 struct WorldSegment {
-  Range departures;
+  unsigned int departure_time;
   unsigned int duration;
 
   std::string origin_stop_id;

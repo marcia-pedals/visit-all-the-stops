@@ -31,53 +31,6 @@ static std::string minutesToHuman(unsigned int minutes) {
   return oss.str();
 }
 
-static std::string humanRange(const Range& range) {
-  if (range.interval == 0) {
-    return minutesToHuman(range.start);
-  }
-  return minutesToHuman(range.start) + " to " + minutesToHuman(range.finish) + " every " + std::to_string(range.interval) + " minutes";
-}
-
-// Returns a vector of segments representing the same segments as the input, but hopefully merged into fewer segments.
-// Preconditions:
-// - All the input segments are singular (they have only one departure each).
-// - The origin and destination of all segments are the same.
-// - The duration of all segments is the same.
-static std::vector<WorldSegment> mergeSegments(const std::vector<WorldSegment>& segments) {
-  std::vector<WorldSegment> sorted = segments;
-  std::sort(sorted.begin(), sorted.end(), [](const WorldSegment& a, const WorldSegment& b) {
-    return a.departures.start < b.departures.start;
-  });
-  if (sorted.size() <= 1) {
-    return sorted;
-  }
-
-  std::vector<WorldSegment> result;
-  unsigned int interval = sorted[1].departures.start - sorted[0].departures.start;
-  unsigned int latest_on_interval_start = sorted[0].departures.start;
-  for (unsigned int i = 1; i < sorted.size(); ++i) {
-    auto segment = sorted[i];
-    if (segment.departures.start == latest_on_interval_start + interval) {
-      latest_on_interval_start = segment.departures.start;
-    } else {
-      result.push_back(segment);
-    }
-  }
-  result = mergeSegments(result);
-  result.insert(
-    result.begin(),
-    WorldSegment{
-      Range(sorted[0].departures.start, latest_on_interval_start, interval),
-      sorted[0].duration,
-      sorted[0].origin_stop_id,
-      sorted[0].destination_stop_id,
-      sorted[0].route_id
-    }
-  );
-
-  return result;
-}
-
 std::optional<std::string> readServiceIds(
   const std::string& directory,
   const std::string& id_prefix,
@@ -236,6 +189,8 @@ std::optional<std::string> readGTFSToWorld(
       }
     );
   }
+
+  // Error checking on the stop times.
   for (auto& entry: world.trips) {
     auto& trip = entry.second;
     std::sort(trip.stop_times.begin(), trip.stop_times.end(), [](const WorldTripStopTimes& a, const WorldTripStopTimes& b) {
@@ -250,9 +205,6 @@ std::optional<std::string> readGTFSToWorld(
   }
 
   // Segment the trips.
-
-  // First build a map from (origin, destination, route, duration) tuple to "singular" segments.
-  std::map<std::tuple<std::string, std::string, std::string, unsigned int>, std::vector<WorldSegment>> singular_segments;
   for (const auto& entry : world.trips) {
     const auto& trip = entry.second;
 
@@ -273,27 +225,18 @@ std::optional<std::string> readGTFSToWorld(
       assert(stop_time.arrival_time.has_value());
       unsigned int arrival_time = stop_time.arrival_time.value();
       unsigned int duration = arrival_time - departure_time;
-      singular_segments[std::make_tuple(origin_stop_id, destination_stop_id, trip.route_id, duration)].push_back(
-        WorldSegment{
-          Range(departure_time, departure_time, 0),
-          duration,
-          origin_stop_id,
-          destination_stop_id,
-          trip.route_id
-        }
-      );
+      world.segments.push_back(WorldSegment{
+        .departure_time = departure_time,
+        .duration = arrival_time - departure_time,
+        .origin_stop_id = origin_stop_id,
+        .destination_stop_id = destination_stop_id,
+        .route_id = trip.route_id
+      });
 
       prev = stop_time;
     }
   }
   
-  // Then try to merge singular segments.
-  for (const auto& entry : singular_segments) {
-    const auto& segments = entry.second;
-    const auto merged = mergeSegments(segments);
-    world.segments.insert(world.segments.end(), merged.begin(), merged.end());
-  }
-
   return std::nullopt;
 }
 
@@ -311,25 +254,74 @@ void printRoutes(std::ostream& os, const World& world) {
   }
 }
 
-void printDepartureTable(std::ostream& os, const World& world, const std::string& stop_id) {
-  os << "Departure table for " << world.stops.at(stop_id).name << "\n";
-  std::map<std::string, std::vector<WorldSegment>> segments_by_route;
-  for (const auto& segment: world.segments) {
-    if (segment.origin_stop_id == stop_id) {
-      segments_by_route[segment.route_id].push_back(segment);
-    }
-  }
-  for (auto& entry : segments_by_route) {
-    const auto& route_id = entry.first;
-    auto& segments = entry.second;
-    std::sort(segments.begin(), segments.end(), [](const WorldSegment& a, const WorldSegment& b) {
-      return a.departures.start < b.departures.start;
-    });
-    os << "  " << world.routes.at(route_id).name << ":\n";
-    for (const auto& segment: segments) {
-      os << "    "
-        << std::left << std::setfill(' ') << std::setw(40) << humanRange(segment.departures)
-        << " (arr " << world.stops.at(segment.destination_stop_id).name << " in " << segment.duration << " mins)\n";
-    }
-  }
-}
+// void printDepartureTable(std::ostream& os, const World& world, const std::string& stop_id) {
+//   os << "Departure table for " << world.stops.at(stop_id).name << "\n";
+//   std::map<std::string, std::vector<WorldSegment>> segments_by_route;
+//   for (const auto& segment: world.segments) {
+//     if (segment.origin_stop_id == stop_id) {
+//       segments_by_route[segment.route_id].push_back(segment);
+//     }
+//   }
+//   for (auto& entry : segments_by_route) {
+//     const auto& route_id = entry.first;
+//     auto& segments = entry.second;
+//     std::sort(segments.begin(), segments.end(), [](const WorldSegment& a, const WorldSegment& b) {
+//       return a.departures.start < b.departures.start;
+//     });
+//     os << "  " << world.routes.at(route_id).name << ":\n";
+//     for (const auto& segment: segments) {
+//       os << "    "
+//         << std::left << std::setfill(' ') << std::setw(40) << humanRange(segment.departures)
+//         << " (arr " << world.stops.at(segment.destination_stop_id).name << " in " << segment.duration << " mins)\n";
+//     }
+//   }
+// }
+
+// Some leftover code from when I was using MultiSegments.
+
+// static std::string humanRange(const Range& range) {
+//   if (range.interval == 0) {
+//     return minutesToHuman(range.start);
+//   }
+//   return minutesToHuman(range.start) + " to " + minutesToHuman(range.finish) + " every " + std::to_string(range.interval) + " minutes";
+// }
+
+// // Returns a vector of segments representing the same segments as the input, but hopefully merged into fewer segments.
+// // Preconditions:
+// // - All the input segments are singular (they have only one departure each).
+// // - The origin and destination of all segments are the same.
+// // - The duration of all segments is the same.
+// static std::vector<WorldSegment> mergeSegments(const std::vector<WorldSegment>& segments) {
+//   std::vector<WorldSegment> sorted = segments;
+//   std::sort(sorted.begin(), sorted.end(), [](const WorldSegment& a, const WorldSegment& b) {
+//     return a.departures.start < b.departures.start;
+//   });
+//   if (sorted.size() <= 1) {
+//     return sorted;
+//   }
+
+//   std::vector<WorldSegment> result;
+//   unsigned int interval = sorted[1].departures.start - sorted[0].departures.start;
+//   unsigned int latest_on_interval_start = sorted[0].departures.start;
+//   for (unsigned int i = 1; i < sorted.size(); ++i) {
+//     auto segment = sorted[i];
+//     if (segment.departures.start == latest_on_interval_start + interval) {
+//       latest_on_interval_start = segment.departures.start;
+//     } else {
+//       result.push_back(segment);
+//     }
+//   }
+//   result = mergeSegments(result);
+//   result.insert(
+//     result.begin(),
+//     WorldSegment{
+//       Range(sorted[0].departures.start, latest_on_interval_start, interval),
+//       sorted[0].duration,
+//       sorted[0].origin_stop_id,
+//       sorted[0].destination_stop_id,
+//       sorted[0].route_id
+//     }
+//   );
+
+//   return result;
+// }
