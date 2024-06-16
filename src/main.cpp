@@ -52,9 +52,9 @@ int main() {
     return 1;
   }
 
-  prettyDepartureTable = "";
-  world.prettyDepartureTable("caltrain-place_MLBR", std::nullopt, prettyDepartureTable);
-  std::cout << prettyDepartureTable << "\n";
+  // prettyDepartureTable = "";
+  // world.prettyDepartureTable("caltrain-place_MLBR", std::nullopt, prettyDepartureTable);
+  // std::cout << prettyDepartureTable << "\n";
 
   // for (const std::string& stop_id : prefixed_bart_segment_stop_ids) {
   //   printDepartureTable(std::cout, world, stop_id);

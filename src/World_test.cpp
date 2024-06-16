@@ -82,6 +82,46 @@ TEST(
   );
 }
 
+TEST(
+  WorldTest,
+  readServiceIdsCaltrainWeekday
+) {
+  EXPECT_THAT(
+    readServiceIdsVec("data/fetched-2024-06-08/caltrain", "caltrain-", 2024, 6, 13),
+    testing::UnorderedElementsAre("caltrain-72982")
+  );
+}
+
+TEST(
+  WorldTest,
+  readServiceIdsCaltrainWeekend
+) {
+  EXPECT_THAT(
+    readServiceIdsVec("data/fetched-2024-06-08/caltrain", "caltrain-", 2024, 6, 16),
+    testing::UnorderedElementsAre("caltrain-72981")
+  );
+}
+
+TEST(
+  WorldTest,
+  readServiceIdsCaltrainMemorialDay
+) {
+  EXPECT_THAT(
+    readServiceIdsVec("data/fetched-2024-06-08/caltrain", "caltrain-", 2024, 5, 27),
+    testing::UnorderedElementsAre("caltrain-72981")
+  );
+}
+
+TEST(
+  WorldTest,
+  readServiceIdsCaltrainSpecialElectricTestingShutdown
+) {
+  EXPECT_THAT(
+    readServiceIdsVec("data/fetched-2024-06-08/caltrain", "caltrain-", 2024, 6, 9),
+    testing::UnorderedElementsAre()
+  );
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
