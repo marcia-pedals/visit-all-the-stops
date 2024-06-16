@@ -10,7 +10,9 @@
     "utility": "cpp",
     "vector": "cpp",
     "chrono": "cpp",
-    "iomanip": "cpp"
+    "iomanip": "cpp",
+    "variant": "cpp",
+    "string": "cpp"
   }
 }
 

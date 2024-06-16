@@ -1,18 +1,31 @@
 #include "World.h"
 
 #include <chrono>
+#include <variant>
+
+#include "absl/strings/string_view.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/numbers.h"
 
 #include "csv.hpp"
 
-static std::optional<unsigned int> parseGTFSTime(const std::string& time) {
+// Parses an optional GTFS time, which is a string of the form "HH:MM:SS" or "".
+static std::variant<std::optional<unsigned int>, std::string> parseGTFSTime(absl::string_view time) {
   if (time.empty()) {
     return std::nullopt;
   }
-  // TODO: More error handling!!
-  unsigned int hours = std::stoi(time.substr(0, 2));
-  unsigned int minutes = std::stoi(time.substr(3, 2));
-  unsigned int seconds = std::stoi(time.substr(6, 2));
-  return hours * 60 + minutes;
+  if (time.size() != 8 || time[2] != ':' || time[5] != ':') {
+    return absl::StrCat("Invalid time: ", time);
+  }
+  bool success = true;
+  unsigned int hours = 0, minutes = 0, seconds = 0;
+  success &= absl::SimpleAtoi(time.substr(0, 2), &hours);
+  success &= absl::SimpleAtoi(time.substr(3, 2), &minutes);
+  success &= absl::SimpleAtoi(time.substr(6, 2), &seconds);
+  if (!success) {
+    return absl::StrCat("Invalid time: ", time);
+  }
+  return hours * 60 + minutes;  // TODO: Handle seconds?
 }
 
 static std::chrono::year_month_day parseGTFSDay(const std::string& day) {
@@ -181,11 +194,19 @@ std::optional<std::string> readGTFSToWorld(
         break;
       }
     }
+    auto arrival_time = parseGTFSTime(row["arrival_time"].get<>());
+    if (std::holds_alternative<std::string>(arrival_time)) {
+      return std::get<1>(arrival_time);
+    }
+    auto departure_time = parseGTFSTime(row["departure_time"].get<>());
+    if (std::holds_alternative<std::string>(departure_time)) {
+      return std::get<1>(departure_time);
+    }
     trip_it->second.stop_times.push_back(
       WorldTripStopTimes{
         stop_id,
-        parseGTFSTime(row["arrival_time"].get<>()),
-        parseGTFSTime(row["departure_time"].get<>())
+        std::get<0>(arrival_time),
+        std::get<0>(departure_time)
       }
     );
   }

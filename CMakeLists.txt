@@ -16,6 +16,7 @@ add_subdirectory(third_party/csv-parser)
 include_directories(third_party/csv-parser/single_include)
 
 add_subdirectory(third_party/abseil-cpp)
+include_directories(third_party/abseil-cpp)
 
 add_subdirectory(third_party/googletest)
 include_directories(third_party/googletest/googlemock/include)
@@ -26,7 +27,7 @@ add_library(MultiSegment src/MultiSegment.cpp)
 
 # World
 add_library(World src/World.cpp)
-target_link_libraries(World MultiSegment csv)
+target_link_libraries(World MultiSegment absl::strings csv)
 
 # Add executable for the main program
 add_executable(hello src/main.cpp)
