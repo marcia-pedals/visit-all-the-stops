@@ -288,43 +288,6 @@ void World::prettyDepartureTable(const std::string& stop_id, const std::optional
   }
 }
 
-// void printStops(std::ostream& os, const World& world) {
-//   for (const auto& entry: world.stops) {
-//     const auto& stop = entry.second;
-//     os << entry.first << ": " << stop.name << " (" << stop.parent_station_id.value_or("") << ")\n";
-//   }
-// }
-
-// void printRoutes(std::ostream& os, const World& world) {
-//   for (const auto& entry: world.routes) {
-//     const auto& route = entry.second;
-//     os << entry.first << ": " << route.name << "\n";
-//   }
-// }
-
-// void printDepartureTable(std::ostream& os, const World& world, const std::string& stop_id) {
-//   os << "Departure table for " << world.stops.at(stop_id).name << "\n";
-//   std::map<std::string, std::vector<WorldSegment>> segments_by_route;
-//   for (const auto& segment: world.segments) {
-//     if (segment.origin_stop_id == stop_id) {
-//       segments_by_route[segment.route_id].push_back(segment);
-//     }
-//   }
-//   for (auto& entry : segments_by_route) {
-//     const auto& route_id = entry.first;
-//     auto& segments = entry.second;
-//     std::sort(segments.begin(), segments.end(), [](const WorldSegment& a, const WorldSegment& b) {
-//       return a.departures.start < b.departures.start;
-//     });
-//     os << "  " << world.routes.at(route_id).name << ":\n";
-//     for (const auto& segment: segments) {
-//       os << "    "
-//         << std::left << std::setfill(' ') << std::setw(40) << humanRange(segment.departures)
-//         << " (arr " << world.stops.at(segment.destination_stop_id).name << " in " << segment.duration << " mins)\n";
-//     }
-//   }
-// }
-
 // Some leftover code from when I was using MultiSegments.
 
 // static std::string humanRange(const Range& range) {
