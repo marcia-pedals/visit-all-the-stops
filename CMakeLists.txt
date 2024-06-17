@@ -29,9 +29,13 @@ add_library(MultiSegment src/MultiSegment.cpp)
 add_library(World src/World.cpp)
 target_link_libraries(World MultiSegment absl::strings absl::str_format absl::time csv)
 
+# Solver
+add_library(Solver src/Solver.cpp)
+target_link_libraries(Solver World absl::flat_hash_map absl::strings)
+
 # Add executable for the main program
 add_executable(main src/main.cpp)
-target_link_libraries(main MultiSegment World)
+target_link_libraries(main MultiSegment World Solver)
 
 
 # Enable testing

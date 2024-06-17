@@ -12,7 +12,11 @@
     "chrono": "cpp",
     "iomanip": "cpp",
     "variant": "cpp",
-    "string": "cpp"
+    "string": "cpp",
+    "deque": "cpp",
+    "forward_list": "cpp",
+    "list": "cpp",
+    "valarray": "cpp"
   }
 }
 

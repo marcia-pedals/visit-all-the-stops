@@ -3,6 +3,7 @@
 
 #include "MultiSegment.h"
 #include "World.h"
+#include "Solver.h"
 #include <unordered_set>
 
 #include "absl/strings/str_cat.h"
@@ -14,17 +15,32 @@ int main() {
 
   std::vector<std::string> bart_segment_stop_ids = {
     "MLBR",
-    "WDUB",
-    "ANTC",
+    "SFIA",
+    "DALY",
     "RICH",
+    "ANTC",
+    "COLS",
+    "DUBL",
     "BERY",
     "BALB",
-    "DALY",
+    "WOAK",
+    "LAKE",
+    "12TH",
+    "19TH",
+    "MCAR",
+    "BAYF",
+    "FTVL",
+
+    // "BERY",
+    // "BAYF",
+    // "DUBL",
+    // "COLS",
   };
   std::unordered_set<std::string> prefixed_bart_segment_stop_ids;
   for (const std::string& stop_id : bart_segment_stop_ids) {
     prefixed_bart_segment_stop_ids.insert("bart-place_" + stop_id);
   }
+  prefixed_bart_segment_stop_ids.insert("bart-OAKL");
   const auto err_opt = readGTFSToWorld("data/fetched-2024-06-08/bart", "bart-", date, prefixed_bart_segment_stop_ids, world);
   if (err_opt.has_value()) {
     std::cout << err_opt.value() << "\n";
@@ -42,20 +58,20 @@ int main() {
   // }
   // std::cout << prettyDepartureTable << "\n";
 
-  std::vector<std::string> caltrain_segment_stop_ids = {
-    "place_MLBR",
-    "sj_diridon",
-    "san_francisco",
-  };
-  std::unordered_set<std::string> prefixed_caltrain_segment_stop_ids;
-  for (const std::string& stop_id : caltrain_segment_stop_ids) {
-    prefixed_caltrain_segment_stop_ids.insert("caltrain-" + stop_id);
-  }
-  const auto err_opt2 = readGTFSToWorld("data/fetched-2024-06-08/caltrain", "caltrain-", date, prefixed_caltrain_segment_stop_ids, world);
-  if (err_opt2.has_value()) {
-    std::cout << err_opt2.value() << "\n";
-    return 1;
-  }
+  // std::vector<std::string> caltrain_segment_stop_ids = {
+  //   "place_MLBR",
+  //   "sj_diridon",
+  //   "san_francisco",
+  // };
+  // std::unordered_set<std::string> prefixed_caltrain_segment_stop_ids;
+  // for (const std::string& stop_id : caltrain_segment_stop_ids) {
+  //   prefixed_caltrain_segment_stop_ids.insert("caltrain-" + stop_id);
+  // }
+  // const auto err_opt2 = readGTFSToWorld("data/fetched-2024-06-08/caltrain", "caltrain-", date, prefixed_caltrain_segment_stop_ids, world);
+  // if (err_opt2.has_value()) {
+  //   std::cout << err_opt2.value() << "\n";
+  //   return 1;
+  // }
 
   // std::string prettyDepartureTable;
   // for (const char* line : {"L1", "L3", "L4", "L5", "B7"}) {
@@ -65,9 +81,11 @@ int main() {
   // std::cout << prettyDepartureTable << "\n";
 
 
-  std::string prettyDepartureTable;
-  world.prettyDepartureTable("caltrain-place_MLBR", std::nullopt, prettyDepartureTable);
-  std::cout << prettyDepartureTable << "\n";
+  // std::string prettyDepartureTable;
+  // world.prettyDepartureTable("caltrain-place_MLBR", std::nullopt, prettyDepartureTable);
+  // std::cout << prettyDepartureTable << "\n";
+
+  Solve(world, "bart-place_BERY");
 
   return 0;
 }
