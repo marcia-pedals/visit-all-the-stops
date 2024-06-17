@@ -30,17 +30,12 @@ add_library(World src/World.cpp)
 target_link_libraries(World MultiSegment absl::strings absl::str_format absl::time csv)
 
 # Add executable for the main program
-add_executable(hello src/main.cpp)
-target_link_libraries(hello MultiSegment World)
+add_executable(main src/main.cpp)
+target_link_libraries(main MultiSegment World)
 
 
 # Enable testing
 enable_testing()
-
-# Example test
-add_executable(example_test src/main_test.cpp)
-target_link_libraries(example_test gtest_main)
-add_test(NAME example_test COMMAND example_test)
 
 # MultiSegment test
 add_executable(MultiSegment_test src/MultiSegment_test.cpp)
