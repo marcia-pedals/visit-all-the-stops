@@ -1,0 +1,106 @@
+Departure table for Millbrae
+Time       Line            Next Stop                                Next Stop Time
+05:14      L1              San Jose Diridon                         06:25
+05:35      L1              San Francisco Caltrain Station           06:01
+05:46      L5              San Jose Diridon                         06:41
+06:01      L5              San Francisco Caltrain Station           06:20
+06:02      L1              San Jose Diridon                         07:18
+06:23      L1              San Francisco Caltrain Station           06:50
+06:23      B7              San Jose Diridon                         07:10
+06:31      L4              San Jose Diridon                         07:27
+06:36      L4              San Francisco Caltrain Station           06:58
+06:44      B7              San Francisco Caltrain Station           07:03
+06:46      L3              San Jose Diridon                         07:46
+07:02      L1              San Jose Diridon                         08:21
+07:04      L1              San Francisco Caltrain Station           07:31
+07:21      L3              San Francisco Caltrain Station           07:41
+07:23      B7              San Jose Diridon                         08:10
+07:31      L4              San Jose Diridon                         08:27
+07:36      L4              San Francisco Caltrain Station           07:58
+07:44      B7              San Francisco Caltrain Station           08:03
+07:46      L3              San Jose Diridon                         08:46
+08:02      L1              San Jose Diridon                         09:17
+08:04      L1              San Francisco Caltrain Station           08:31
+08:19      L3              San Francisco Caltrain Station           08:39
+08:23      B7              San Jose Diridon                         09:09
+08:31      L4              San Jose Diridon                         09:27
+08:36      L4              San Francisco Caltrain Station           08:58
+08:44      B7              San Francisco Caltrain Station           09:03
+08:46      L3              San Jose Diridon                         09:46
+09:02      L1              San Jose Diridon                         10:16
+09:04      L1              San Francisco Caltrain Station           09:31
+09:19      L3              San Francisco Caltrain Station           09:39
+09:32      L5              San Jose Diridon                         10:26
+09:37      L4              San Francisco Caltrain Station           09:59
+10:02      L1              San Jose Diridon                         11:16
+10:04      L1              San Francisco Caltrain Station           10:31
+10:32      L5              San Jose Diridon                         11:26
+10:36      L5              San Francisco Caltrain Station           10:55
+11:02      L1              San Jose Diridon                         12:16
+11:03      L1              San Francisco Caltrain Station           11:31
+11:32      L5              San Jose Diridon                         12:26
+11:36      L5              San Francisco Caltrain Station           11:55
+12:02      L1              San Jose Diridon                         13:16
+12:03      L1              San Francisco Caltrain Station           12:31
+12:32      L5              San Jose Diridon                         13:26
+12:36      L5              San Francisco Caltrain Station           12:55
+13:02      L1              San Jose Diridon                         14:16
+13:03      L1              San Francisco Caltrain Station           13:31
+13:32      L5              San Jose Diridon                         14:26
+13:36      L5              San Francisco Caltrain Station           13:55
+14:02      L1              San Jose Diridon                         15:16
+14:03      L1              San Francisco Caltrain Station           14:31
+14:32      L5              San Jose Diridon                         15:26
+14:36      L5              San Francisco Caltrain Station           14:55
+15:02      L1              San Jose Diridon                         16:17
+15:03      L1              San Francisco Caltrain Station           15:31
+15:30      L4              San Jose Diridon                         16:28
+15:36      L5              San Francisco Caltrain Station           15:55
+15:47      L3              San Jose Diridon                         16:49
+16:02      L1              San Jose Diridon                         17:16
+16:03      L1              San Francisco Caltrain Station           16:31
+16:20      L3              San Francisco Caltrain Station           16:41
+16:22      B7              San Jose Diridon                         17:09
+16:31      L4              San Jose Diridon                         17:26
+16:36      L4              San Francisco Caltrain Station           16:58
+16:44      B7              San Francisco Caltrain Station           17:03
+16:46      L3              San Jose Diridon                         17:49
+17:02      L1              San Jose Diridon                         18:19
+17:04      L1              San Francisco Caltrain Station           17:31
+17:19      L3              San Francisco Caltrain Station           17:41
+17:22      B7              San Jose Diridon                         18:09
+17:31      L4              San Jose Diridon                         18:27
+17:36      L4              San Francisco Caltrain Station           17:58
+17:44      B7              San Francisco Caltrain Station           18:03
+17:46      L3              San Jose Diridon                         18:50
+18:02      L1              San Jose Diridon                         19:17
+18:04      L1              San Francisco Caltrain Station           18:31
+18:19      L3              San Francisco Caltrain Station           18:41
+18:22      B7              San Jose Diridon                         19:09
+18:31      L4              San Jose Diridon                         19:26
+18:36      L4              San Francisco Caltrain Station           18:58
+18:44      B7              San Francisco Caltrain Station           19:03
+18:46      L3              San Jose Diridon                         19:46
+19:04      L1              San Francisco Caltrain Station           19:32
+19:06      L1              San Jose Diridon                         20:17
+19:19      L3              San Francisco Caltrain Station           19:41
+19:32      L5              San Jose Diridon                         20:26
+19:36      L4              San Francisco Caltrain Station           19:58
+20:01      L1              San Jose Diridon                         21:20
+20:06      L1              San Francisco Caltrain Station           20:33
+20:31      L5              San Jose Diridon                         21:33
+20:35      L5              San Francisco Caltrain Station           20:59
+20:46      L1              San Jose Diridon                         22:03
+21:04      L1              San Francisco Caltrain Station           21:31
+21:16      L1              San Jose Diridon                         22:32
+21:23      L1              San Francisco Caltrain Station           21:50
+21:39      L1              San Jose Diridon                         22:57
+21:55      L1              San Francisco Caltrain Station           22:24
+22:16      L1              San Jose Diridon                         23:32
+22:24      L1              San Francisco Caltrain Station           22:53
+22:40      L1              San Jose Diridon                         23:55
+22:55      L1              San Francisco Caltrain Station           23:23
+23:10      L1              San Jose Diridon                         24:24
+23:42      L1              San Francisco Caltrain Station           24:11
+24:26      L1              San Francisco Caltrain Station           24:52
+24:28      L1              San Jose Diridon                         25:38

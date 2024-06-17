@@ -253,6 +253,9 @@ std::optional<std::string> readGTFSToWorld(
     }
   }
   std::sort(world.segments.begin(), world.segments.end(), [](const WorldSegment& a, const WorldSegment& b) {
+    if (a.departure_time.seconds == b.departure_time.seconds) {
+      return a.duration.seconds < b.duration.seconds;
+    }
     return a.departure_time.seconds < b.departure_time.seconds;
   });
   
@@ -267,7 +270,7 @@ void World::prettyRoutes(std::string& result) const {
 }
 
 void World::prettyDepartureTable(const std::string& stop_id, const std::optional<std::string>& line_name, std::string& result) const {
-  constexpr const char* table_format = "%-10s %-15s %-40s %-10s\n";
+  constexpr const char* table_format = "%-10s %-15s %-40s %s\n";
   absl::StrAppend(&result, "Departure table for ", stops.at(stop_id).name, "\n");
   absl::StrAppendFormat(&result, table_format, "Time", "Line", "Next Stop", "Next Stop Time");
   for (const auto& segment : segments) {
