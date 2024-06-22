@@ -151,6 +151,30 @@ void FindAllRoutes(RouteVisitor &visitor, const Problem& problem, size_t start) 
   FindAllRoutesRec(visitor, problem, target_visited, state, start, start_visited);
 }
 
+static std::vector<Segment> GetMinimalConnections(
+  const std::vector<Segment>& a,
+  const std::vector<Segment>& b
+) {
+  std::vector<Segment> result;
+
+  size_t a_index = 0;
+  size_t b_index = 0;
+  while (a_index < a.size()) {
+    while (b_index < b.size() & b[b_index].departure_time.seconds < a[a_index].arrival_time.seconds) {
+      ++b_index;
+    }
+    if (b_index == b.size()) {
+      break;
+    }
+    if (a_index == a.size() - 1 || a[a_index + 1].arrival_time.seconds > b[b_index].departure_time.seconds) {
+      result.push_back({a[a_index].departure_time, b[b_index].arrival_time});
+    }
+    ++a_index;
+  }
+
+  return result;
+}
+
 void Solve(const World& world, const std::string& start_stop_id) {
   Problem problem = BuildProblem(world);
   std::cout << "Built problem with " << problem.stop_index_to_id.size() << " stops.\n";
@@ -159,7 +183,54 @@ void Solve(const World& world, const std::string& start_stop_id) {
   FindAllRoutes(visitor, problem, problem.stop_id_to_index.at(start_stop_id));
   std::cout << "Found " << visitor.routes.size() << " routes.\n";
 
-  // ALMOST THERE!
-  // The next thing to do is for each route step through and match up all departure/arrivals to find
-  // all the minimal trips along the route.
+  unsigned int best_duration = std::numeric_limits<unsigned int>::max();
+  std::optional<Segment> best_segment;
+  std::optional<std::vector<size_t>> best_route;
+
+  for (const std::vector<size_t>& route : visitor.routes) {
+    std::optional<std::vector<Segment>> current_segments;
+    for (size_t i = 1; i < route.size(); ++i) {
+      const size_t origin = route[i - 1];
+      const size_t destination = route[i];
+
+      const std::vector<Segment>* next_segments = nullptr;
+      for (const GroupedSegments& edge : problem.segments[origin]) {
+        if (edge.destination_stop_index == destination) {
+          next_segments = &edge.segments;
+          break;
+        }
+      }
+
+      if (next_segments == nullptr) {
+        current_segments = {};
+        break;
+      }
+
+      if (current_segments.has_value()) {
+        current_segments = GetMinimalConnections(*current_segments, *next_segments);
+      } else {
+        current_segments = *next_segments;
+      }
+    }
+
+    if (current_segments.has_value()) {
+      for (const Segment& segment : *current_segments) {
+        const unsigned int duration = segment.arrival_time.seconds - segment.departure_time.seconds;
+        if (duration < best_duration) {
+          best_duration = duration;
+          best_segment = segment;
+          best_route = route;
+        }
+      }
+    }
   }
+
+  std::cout << "Best duration: " << absl::StrCat(WorldDuration(best_duration), "\n");
+
+  std::vector<std::string> route_stops;
+  for (size_t stop_index : *best_route) {
+    route_stops.push_back(problem.stop_index_to_id[stop_index]);
+  }
+  std::cout << absl::StrJoin(route_stops, " -> ") << "\n";
+  std::cout << "Departure: " << absl::StrCat(best_segment->departure_time, "") << "\n";
+}

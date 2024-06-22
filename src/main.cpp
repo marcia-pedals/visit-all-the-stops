@@ -10,42 +10,42 @@
 #include "absl/time/civil_time.h"
 
 int main() {
-  absl::CivilDay date(2024, 5, 28);
+  absl::CivilDay date(2024, 6, 10);
   World world;
 
-  std::vector<std::string> bart_segment_stop_ids = {
-    "MLBR",
-    "SFIA",
-    "DALY",
-    "RICH",
-    "ANTC",
-    "COLS",
-    "DUBL",
-    "BERY",
-    "BALB",
-    "WOAK",
-    "LAKE",
-    "12TH",
-    "19TH",
-    "MCAR",
-    "BAYF",
-    "FTVL",
+  // std::vector<std::string> bart_segment_stop_ids = {
+  //   "MLBR",
+  //   "SFIA",
+  //   "DALY",
+  //   "RICH",
+  //   "ANTC",
+  //   "COLS",
+  //   "DUBL",
+  //   "BERY",
+  //   "BALB",
+  //   "WOAK",
+  //   "LAKE",
+  //   "12TH",
+  //   "19TH",
+  //   "MCAR",
+  //   "BAYF",
+  //   "FTVL",
 
-    // "BERY",
-    // "BAYF",
-    // "DUBL",
-    // "COLS",
-  };
-  std::unordered_set<std::string> prefixed_bart_segment_stop_ids;
-  for (const std::string& stop_id : bart_segment_stop_ids) {
-    prefixed_bart_segment_stop_ids.insert("bart-place_" + stop_id);
-  }
-  prefixed_bart_segment_stop_ids.insert("bart-OAKL");
-  const auto err_opt = readGTFSToWorld("data/fetched-2024-06-08/bart", "bart-", date, prefixed_bart_segment_stop_ids, world);
-  if (err_opt.has_value()) {
-    std::cout << err_opt.value() << "\n";
-    return 1;
-  }
+  //   // "BERY",
+  //   // "BAYF",
+  //   // "DUBL",
+  //   // "COLS",
+  // };
+  // std::unordered_set<std::string> prefixed_bart_segment_stop_ids;
+  // for (const std::string& stop_id : bart_segment_stop_ids) {
+  //   prefixed_bart_segment_stop_ids.insert("bart-place_" + stop_id);
+  // }
+  // prefixed_bart_segment_stop_ids.insert("bart-OAKL");
+  // const auto err_opt = readGTFSToWorld("data/fetched-2024-06-08/bart", "bart-", date, prefixed_bart_segment_stop_ids, world);
+  // if (err_opt.has_value()) {
+  //   std::cout << err_opt.value() << "\n";
+  //   return 1;
+  // }
 
   // std::string prettyRoutes;
   // world.prettyRoutes(prettyRoutes);
@@ -85,7 +85,29 @@ int main() {
   // world.prettyDepartureTable("caltrain-place_MLBR", std::nullopt, prettyDepartureTable);
   // std::cout << prettyDepartureTable << "\n";
 
-  Solve(world, "bart-place_BERY");
+  std::vector<std::string> vta_segment_stop_ids = {
+    "PS_MVTC",
+    "PS_OLDI",
+    "PS_CHMP",
+    "PS_TASM",
+    "PS_BAYP",
+    "PS_ALUM",
+    // paseo de san antonio???
+    "PS_CONV",
+    "PS_WINC",
+    "PS_TRSA",  // Santa Teresa
+  };
+  std::unordered_set<std::string> prefixed_vta_segment_stop_ids;
+  for (const std::string& stop_id : vta_segment_stop_ids) {
+    prefixed_vta_segment_stop_ids.insert("vta-" + stop_id);
+  }
+  const auto err_opt = readGTFSToWorld("data/fetched-2024-06-08/gtfs_vta", "vta-", date, prefixed_vta_segment_stop_ids, world);
+  if (err_opt.has_value()) {
+    std::cout << err_opt.value() << "\n";
+    return 1;
+  }
+
+  Solve(world, "vta-PS_MVTC");
 
   return 0;
 }
