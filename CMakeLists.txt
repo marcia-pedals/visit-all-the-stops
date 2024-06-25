@@ -25,6 +25,9 @@ include_directories(third_party/googletest/googletest/include)
 # MultiSegment
 add_library(MultiSegment src/MultiSegment.cpp)
 
+# WalkFinder
+add_library(WalkFinder src/WalkFinder.cpp)
+
 # World
 add_library(World src/World.cpp)
 target_link_libraries(World MultiSegment absl::strings absl::str_format absl::time csv)
@@ -48,6 +51,13 @@ target_link_libraries(MultiSegment_test MultiSegment)
 target_link_libraries(MultiSegment_test rapidcheck)
 add_test(NAME MultiSegment_test COMMAND MultiSegment_test)
 set_tests_properties(MultiSegment_test PROPERTIES ENVIRONMENT "RC_PARAMS=max_success=10000")
+
+# WalkFinder test
+add_executable(WalkFinder_test src/WalkFinder_test.cpp)
+target_link_libraries(WalkFinder_test gtest_main gmock_main)
+target_link_libraries(WalkFinder_test rapidcheck)
+target_link_libraries(WalkFinder_test WalkFinder)
+add_test(NAME WalkFinder_test COMMAND WalkFinder_test)
 
 # World test
 add_executable(World_test src/World_test.cpp)
