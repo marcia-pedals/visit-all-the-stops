@@ -20,7 +20,8 @@ AdjacencyList arbitraryAdjacencyList() {
   return result;
 }
 
-bool isMinimalWalk(const std::vector<size_t>& walk, size_t num_stops) {
+template <size_t MaxStops>
+bool isMinimalWalk(const std::vector<size_t>& walk, size_t num_stops, std::bitset<MaxStops> target_stops) {
   // The "current" cumulative number of times each stop has been visited.
   std::vector<size_t> visit_count(num_stops, 0);
 
@@ -46,9 +47,12 @@ bool isMinimalWalk(const std::vector<size_t>& walk, size_t num_stops) {
       const auto& visit_count_start = visit_count_at_stop[stop][i];
       const auto& visit_count_end = visit_count_at_stop[stop][i + 1];
 
-      // See if there's a stop that we visited in the excursion that we didn't visit before or after.
+      // See if there's a target stop that we visited in the excursion that we didn't visit before or after.
       bool found_necessary_stop = false;
       for (size_t candidate = 0; candidate < num_stops; ++candidate) {
+        if (!target_stops[candidate]) {
+          continue;
+        }
         if (visit_count_start[candidate] == 0 && visit_count_end[candidate] == visit_count[candidate]) {
           found_necessary_stop = true;
           break;
@@ -71,16 +75,29 @@ RC_GTEST_PROP(
   ()
 ) {
   AdjacencyList adjacency_list = arbitraryAdjacencyList();
-  std::unordered_set<size_t> expected;
+
+  std::bitset<32> target_stops;
   for (size_t i = 0; i < adjacency_list.edges.size(); ++i) {
-    expected.insert(i);
+    target_stops[i] = *rc::gen::arbitrary<bool>();
   }
 
+  std::unordered_set<size_t> expected;
+  for (size_t i = 0; i < adjacency_list.edges.size(); ++i) {
+    if (target_stops[i]) {
+      expected.insert(i);
+    }
+  }
+
+  // TODO NOW: When there are no target stops, the walk finder still returns a walk starting at 0, so this test fails.
+  // Think more about this edge case and whether I should adjust the test or change the interface of the walk finder so that
+  // this isn't an edge case. Maybe it should not take a starting point and instead return all the minimal walks??!
+  // Also this seems to suggest that the minimality finder should be able to delete a single vertex walk.
+
   CollectorWalkVisitor visitor;
-  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0);
+  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0, target_stops);
   for (const auto& walk : visitor.walks) {
     std::unordered_set<size_t> actual(walk.begin(), walk.end());
-    EXPECT_EQ(expected, actual);
+    RC_ASSERT(expected == actual);
   }
 }
 
@@ -89,8 +106,16 @@ TEST(
   minimalPropertyImplementedCorrectly
 ) {
   // This is just testing the property for the next test.
-  EXPECT_TRUE(isMinimalWalk({0, 1, 2, 3}, 4));
-  EXPECT_FALSE(isMinimalWalk({0, 1, 0, 1, 2}, 3));
+
+  EXPECT_TRUE(isMinimalWalk({0, 1, 2, 3}, 4, std::bitset<4>("1111")));
+  EXPECT_FALSE(isMinimalWalk({0, 1, 0, 1, 2}, 3, std::bitset<4>("1111")));
+
+  EXPECT_TRUE(isMinimalWalk({0, 1, 3, 0, 2}, 4, std::bitset<4>("1111")));
+
+  // "1" is not a target stop, so you can remove the whole loop from 0 to 0.
+  // TODO NOW: Is this failing because `isMinimalWalk` is wrong or because 1101 isn't right for making "1" not a target stop?
+  // Probably the former because I tried 1011 and it still fails.
+  EXPECT_FALSE(isMinimalWalk({0, 1, 3, 0, 2}, 4, std::bitset<4>("1101")));
 }
 
 RC_GTEST_PROP(
@@ -99,10 +124,16 @@ RC_GTEST_PROP(
   ()
 ) {
   AdjacencyList adjacency_list = arbitraryAdjacencyList();
+
+  std::bitset<32> target_stops;
+  for (size_t i = 0; i < adjacency_list.edges.size(); ++i) {
+    target_stops[i] = *rc::gen::arbitrary<bool>();
+  }
+
   CollectorWalkVisitor visitor;
-  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0);
+  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0, target_stops);
   for (const auto& walk : visitor.walks) {
-    EXPECT_TRUE(isMinimalWalk(walk, adjacency_list.edges.size()));
+    RC_ASSERT(isMinimalWalk(walk, adjacency_list.edges.size(), target_stops));
   }
 }
 
@@ -127,12 +158,44 @@ TEST(
     {3},
     {0}
   };
+  std::bitset<32> target_stops("1111");
 
   CollectorWalkVisitor visitor;
-  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0);
+  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0, target_stops);
   EXPECT_THAT(visitor.walks, ::testing::UnorderedElementsAre(
     ::testing::ElementsAre(0, 1, 3, 0, 2),
     ::testing::ElementsAre(0, 2, 3, 0, 1)
+  ));
+}
+
+TEST(
+  WalkFinderTest,
+  example1_notAllStops
+) {
+  //   0 <----
+  //  / \    |
+  // v   v   |
+  // 1   2   |
+  //  \ /    |
+  //   v     |
+  //   3------
+  AdjacencyList adjacency_list;
+  adjacency_list.edges = {
+    {1, 2},
+    {3},
+    {3},
+    {0}
+  };
+  std::bitset<32> target_stops("1101");
+
+  // TODO NOW: Hmm, this test is revealing that the minimal property doesn't work correctly
+  // when the target stops are a subset of all the stops! It seems to be checking for minimality
+  // hitting _all_ the stops.
+
+  CollectorWalkVisitor visitor;
+  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0, target_stops);
+  EXPECT_THAT(visitor.walks, ::testing::UnorderedElementsAre(
+    ::testing::ElementsAre(0, 2, 3)
   ));
 }
 
@@ -148,9 +211,10 @@ TEST(
     {3},
     {}
   };
+  std::bitset<32> target_stops("1111");
 
   CollectorWalkVisitor visitor;
-  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0);
+  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0, target_stops);
   EXPECT_THAT(visitor.walks, ::testing::UnorderedElementsAre(
     ::testing::ElementsAre(0, 1, 2, 3)
   ));

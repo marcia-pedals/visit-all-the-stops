@@ -8,7 +8,12 @@ struct AdjacencyList {
 };
 
 template <typename WalkVisitor, size_t MaxStops>
-void FindAllMinimalWalksDFS(WalkVisitor& visitor, const AdjacencyList& adjacency_list, size_t start);
+void FindAllMinimalWalksDFS(
+  WalkVisitor& visitor,
+  const AdjacencyList& adjacency_list,
+  size_t start,
+  std::bitset<MaxStops> target_stops
+);
 
 struct CollectorWalkVisitor {
   std::vector<std::vector<size_t>> walks;
@@ -46,14 +51,14 @@ template<typename WalkVisitor, size_t MaxStops>
 static void FindAllRoutesDFSRec(
   WalkVisitor& visitor,
   const AdjacencyList& adjacency_list,
-  const std::bitset<MaxStops> target_visited,
+  const std::bitset<MaxStops> target_stops,
   RouteSearchStateDFS<MaxStops>& state,
   size_t current_stop,
   const std::bitset<MaxStops> current_visited
 ) {
   visitor.PushStop(current_stop);
 
-  if (current_visited == target_visited) {
+  if ((target_stops & current_visited) == target_stops) {
     visitor.WalkDone();
     visitor.PopStop();
     return;
@@ -79,7 +84,7 @@ static void FindAllRoutesDFSRec(
   for (const size_t next_stop: adjacency_list.edges[current_stop]) {
     std::bitset<MaxStops> next_visited = current_visited;
     next_visited[next_stop] = true;
-    FindAllRoutesDFSRec(visitor, adjacency_list, target_visited, state, next_stop, next_visited);
+    FindAllRoutesDFSRec(visitor, adjacency_list, target_stops, state, next_stop, next_visited);
   }
 
   state.visited_at_stop[current_stop] = old_visited_at_current_stop;
@@ -90,7 +95,12 @@ static void FindAllRoutesDFSRec(
 }; // namespace
 
 template <typename WalkVisitor, size_t MaxStops>
-void FindAllMinimalWalksDFS(WalkVisitor &visitor, const AdjacencyList &adjacency_list, size_t start) {
+void FindAllMinimalWalksDFS(
+  WalkVisitor &visitor,
+  const AdjacencyList &adjacency_list,
+  size_t start,
+  std::bitset<MaxStops> target_stops
+) {
   assert (start < adjacency_list.edges.size());
 
   RouteSearchStateDFS<MaxStops> state;
@@ -98,14 +108,8 @@ void FindAllMinimalWalksDFS(WalkVisitor &visitor, const AdjacencyList &adjacency
 
   assert(adjacency_list.edges.size() <= MaxStops);
 
-  std::bitset<MaxStops> target_visited;
-  for (size_t i = 0; i < adjacency_list.edges.size(); i++)
-  {
-    target_visited[i] = true;
-  }
-
   std::bitset<MaxStops> start_visited;
   start_visited[start] = true;
 
-  FindAllRoutesDFSRec(visitor, adjacency_list, target_visited, state, start, start_visited);
+  FindAllRoutesDFSRec(visitor, adjacency_list, target_stops, state, start, start_visited);
 }
