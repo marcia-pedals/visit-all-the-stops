@@ -1,5 +1,4 @@
 date = "2024-06-10"
-start_stop_id = "vta-PS_MVTC"
 target_stop_ids = [
   "vta-PS_MVTC",
   "vta-PS_CHMP",

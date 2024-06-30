@@ -16,9 +16,6 @@ std::optional<std::string> readConfig(
     return absl::StrCat("Error parsing config: ", e.what());
   }
 
-  if (config_table.get("start_stop_id") != nullptr) {
-    config.start_stop_id = config_table.at("start_stop_id").as_string()->get();
-  }
   if (config_table.get("target_stop_ids") != nullptr) {
     const toml::array* target_stop_ids_arr = config_table.at("target_stop_ids").as_array();
     for (size_t i = 0; i < target_stop_ids_arr->size(); ++i) {

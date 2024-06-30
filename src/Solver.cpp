@@ -95,14 +95,12 @@ static std::vector<Segment> GetMinimalConnections(
 
 void Solve(
   const World& world,
-  const std::string& start_stop_id,
   const std::vector<std::string>& target_stop_ids
 ) {
   std::cout << "Building problem...\n";
   Problem problem = BuildProblem(world);
   std::cout << "Built problem with " << problem.stop_index_to_id.size() << " stops.\n";
 
-  size_t start_stop_index = problem.stop_id_to_index.at(start_stop_id);
   std::bitset<32> target_stops;
   for (const std::string& stop_id : target_stop_ids) {
     target_stops[problem.stop_id_to_index.at(stop_id)] = true;
@@ -116,7 +114,6 @@ void Solve(
   FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(
     visitor,
     problem.adjacency_list,
-    problem.stop_id_to_index.at(start_stop_id),
     target_stops
   );
   std::cout << "Found " << visitor.walks.size() << " walks.\n";

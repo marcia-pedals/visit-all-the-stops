@@ -98,19 +98,18 @@ template <typename WalkVisitor, size_t MaxStops>
 void FindAllMinimalWalksDFS(
   WalkVisitor &visitor,
   const AdjacencyList &adjacency_list,
-  size_t start,
   std::bitset<MaxStops> target_stops
 ) {
-  assert (start < adjacency_list.edges.size());
   assert (adjacency_list.edges.size() <= MaxStops);
 
-  RouteSearchStateDFS<MaxStops> state;
-  state.visited_at_stop.resize(adjacency_list.edges.size());
-
-  assert(adjacency_list.edges.size() <= MaxStops);
-
-  std::bitset<MaxStops> start_visited;
-  start_visited[start] = true;
-
-  FindAllMinimalWalksDFSRec(visitor, adjacency_list, target_stops, state, start, start_visited);
+  for (size_t start = 0; start < adjacency_list.edges.size(); ++start) {
+    if (!target_stops[start]) {
+      continue;
+    }
+    RouteSearchStateDFS<MaxStops> state;
+    state.visited_at_stop.resize(adjacency_list.edges.size());
+    std::bitset<MaxStops> start_visited;
+    start_visited[start] = true;
+    FindAllMinimalWalksDFSRec(visitor, adjacency_list, target_stops, state, start, start_visited);
+  }
 }

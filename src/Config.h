@@ -10,7 +10,6 @@ struct ReadConfigOptions {
 
 struct Config {
   World world;
-  std::string start_stop_id;
   std::vector<std::string> target_stop_ids;
 };
 

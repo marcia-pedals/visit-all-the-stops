@@ -106,7 +106,7 @@ RC_GTEST_PROP(
   }
 
   CollectorWalkVisitor visitor;
-  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0, target_stops);
+  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, target_stops);
   for (const auto& walk : visitor.walks) {
     RC_ASSERT(isMinimalWalk(walk, adjacency_list.edges.size(), target_stops));
   }
@@ -136,10 +136,21 @@ TEST(
   std::bitset<32> target_stops("1111");
 
   CollectorWalkVisitor visitor;
-  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0, target_stops);
+  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, target_stops);
   EXPECT_THAT(visitor.walks, ::testing::UnorderedElementsAre(
+    // Starting at 0.
     ::testing::ElementsAre(0, 1, 3, 0, 2),
-    ::testing::ElementsAre(0, 2, 3, 0, 1)
+    ::testing::ElementsAre(0, 2, 3, 0, 1),
+
+    // Starting at 1.
+    ::testing::ElementsAre(1, 3, 0, 2),
+
+    // Starting at 2.
+    ::testing::ElementsAre(2, 3, 0, 1),
+
+    // Starting at 3.
+    ::testing::ElementsAre(3, 0, 1, 3, 0, 2),
+    ::testing::ElementsAre(3, 0, 2, 3, 0, 1)
   ));
 }
 
@@ -164,13 +175,19 @@ TEST(
   std::bitset<32> target_stops("1101");
 
   CollectorWalkVisitor visitor;
-  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0, target_stops);
+  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, target_stops);
   EXPECT_THAT(visitor.walks, ::testing::UnorderedElementsAre(
+    // Starting at 0.
     ::testing::ElementsAre(0, 2, 3),
-
     // The following one really is minimal, even though it's pretty counterintuitive. (Imagine if
     // the 2->3 edge is really really slow. Then the following one is the best walk!)
-    ::testing::ElementsAre(0, 1, 3, 0, 2)
+    ::testing::ElementsAre(0, 1, 3, 0, 2),
+
+    // Starting at 2.
+    ::testing::ElementsAre(2, 3, 0),
+
+    // Starting at 3.
+    ::testing::ElementsAre(3, 0, 2)
   ));
 }
 
@@ -195,9 +212,13 @@ TEST(
   std::bitset<32> target_stops("0011");
 
   CollectorWalkVisitor visitor;
-  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0, target_stops);
+  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, target_stops);
   EXPECT_THAT(visitor.walks, ::testing::UnorderedElementsAre(
-    ::testing::ElementsAre(0, 1)
+    // Starting at 0.
+    ::testing::ElementsAre(0, 1),
+
+    // Starting at 1.
+    ::testing::ElementsAre(1, 3, 0)
   ));
 }
 
@@ -216,7 +237,7 @@ TEST(
   std::bitset<32> target_stops("1111");
 
   CollectorWalkVisitor visitor;
-  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, 0, target_stops);
+  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(visitor, adjacency_list, target_stops);
   EXPECT_THAT(visitor.walks, ::testing::UnorderedElementsAre(
     ::testing::ElementsAre(0, 1, 2, 3)
   ));

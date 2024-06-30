@@ -1,5 +1,4 @@
 date = "2024-06-10"
-start_stop_id = "bart-place_BERY"
 target_stop_ids = [
   "bart-place_LAKE",
   "bart-place_BERY",

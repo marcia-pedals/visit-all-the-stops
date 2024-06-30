@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  Solve(config.world, config.start_stop_id, config.target_stop_ids);
+  Solve(config.world, config.target_stop_ids);
 
   return 0;
 }
