@@ -108,7 +108,7 @@ std::optional<std::string> readGTFSToWorld(
   const std::string& directory,
   const std::string& id_prefix,
   absl::CivilDay date,
-  const std::unordered_set<std::string>& segment_stop_ids,
+  const std::unordered_set<std::string>* segment_stop_ids,
   World& world
 ) {
   std::unordered_set<std::string> service_ids;
@@ -136,25 +136,27 @@ std::optional<std::string> readGTFSToWorld(
   }
 
   // Validate segment_stop_ids.
-  std::vector<const std::string> stops_not_found;
-  std::vector<const std::string> stops_not_root;
-  for (const std::string& stop_id : segment_stop_ids) {
-    auto it = world.stops.find(stop_id);
-    if (it == world.stops.end()) {
-      stops_not_found.push_back(stop_id);
-    } else if (it->second.parent_station_id.has_value()) {
-      stops_not_root.push_back(stop_id);
+  if (segment_stop_ids != nullptr) {
+    std::vector<const std::string> stops_not_found;
+    std::vector<const std::string> stops_not_root;
+    for (const std::string& stop_id : *segment_stop_ids) {
+      auto it = world.stops.find(stop_id);
+      if (it == world.stops.end()) {
+        stops_not_found.push_back(stop_id);
+      } else if (it->second.parent_station_id.has_value()) {
+        stops_not_root.push_back(stop_id);
+      }
     }
-  }
-  if (!stops_not_found.empty() || !stops_not_root.empty()) {
-    std::string error_message = "Problems reading GTFS:\n";
-    for (const std::string& stop_id : stops_not_found) {
-      error_message += "  Stop not found: " + stop_id + "\n";
+    if (!stops_not_found.empty() || !stops_not_root.empty()) {
+      std::string error_message = "Problems reading GTFS:\n";
+      for (const std::string& stop_id : stops_not_found) {
+        error_message += "  Stop not found: " + stop_id + "\n";
+      }
+      for (const std::string& stop_id : stops_not_root) {
+        error_message += "  Stop not root: " + stop_id + "\n";
+      }
+      return error_message;
     }
-    for (const std::string& stop_id : stops_not_root) {
-      error_message += "  Stop not root: " + stop_id + "\n";
-    }
-    return error_message;
   }
 
   // Load trips.
@@ -226,7 +228,7 @@ std::optional<std::string> readGTFSToWorld(
 
     std::optional<WorldTripStopTimes> prev;
     for (const auto& stop_time : trip.stop_times) {
-      if (!segment_stop_ids.contains(stop_time.stop_id)) {
+      if (segment_stop_ids != nullptr && !segment_stop_ids->contains(stop_time.stop_id)) {
         continue;
       }
       if (!prev.has_value()) {

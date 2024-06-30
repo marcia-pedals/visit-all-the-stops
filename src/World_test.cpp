@@ -146,7 +146,7 @@ TEST(
     "data/fetched-2024-06-08/bart",
     "bart-",
     absl::CivilDay(2024, 6, 7),
-    prefixed_bart_segment_stop_ids,
+    &prefixed_bart_segment_stop_ids,
     world
   );
   ASSERT_EQ(err_opt, std::nullopt);
@@ -184,7 +184,7 @@ TEST(
     "data/fetched-2024-06-08/caltrain",
     "caltrain-",
     absl::CivilDay(2024, 6, 7),
-    prefixed_caltrain_segment_stop_ids,
+    &prefixed_caltrain_segment_stop_ids,
     world
   );
   ASSERT_EQ(err_opt, std::nullopt);

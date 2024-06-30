@@ -1,0 +1,13 @@
+date = "2024-06-10"
+
+[[gtfs]]
+dir = "data/fetched-2024-06-08/caltrain"
+prefix = "caltrain-"
+segment_stop_ids = [
+  "caltrain-sunnyvale",
+  "caltrain-california_ave",
+]
+
+[[gtfs]]
+dir = "data/fetched-2024-06-08/bart"
+prefix = "bart-"

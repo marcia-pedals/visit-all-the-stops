@@ -89,15 +89,17 @@ std::optional<std::string> readServiceIds(
 //
 // All GTFS IDs are prefixed with `id_prefix`.
 //
-// Trips are segmented at the stops in `segment_stop_ids`, which must be root stops (i.e. stops with
-// no parent station). Trips are always interpreted as stopping at the root ancestor of the stop
-// specified in the trip.
+// If `segment_stop_ids` has a value, trips are segmented at the stops in `segment_stop_ids`, which
+// must be root stops (i.e. stops with no parent station). Otherwise, trips are segmented at all
+// stops.
+//
+// Trips are always interpreted as stopping at the root ancestor of the stop specified in the trip.
 //
 // Returns an error message if something went wrong, otherwise returns nullopt.
 std::optional<std::string> readGTFSToWorld(
   const std::string& directory,
   const std::string& id_prefix,
   absl::CivilDay date,
-  const std::unordered_set<std::string>& segment_stop_ids,
+  const std::unordered_set<std::string>* segment_stop_ids,
   World& world
 );

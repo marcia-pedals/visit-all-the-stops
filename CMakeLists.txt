@@ -22,6 +22,8 @@ add_subdirectory(third_party/googletest)
 include_directories(third_party/googletest/googlemock/include)
 include_directories(third_party/googletest/googletest/include)
 
+include_directories(third_party/tomlplusplus/include)
+
 # MultiSegment
 add_library(MultiSegment src/MultiSegment.cpp)
 
@@ -33,9 +35,17 @@ target_link_libraries(World MultiSegment absl::strings absl::str_format absl::ti
 add_library(Solver src/Solver.cpp)
 target_link_libraries(Solver World absl::flat_hash_map absl::strings)
 
-# Add executable for the main program
+# Config
+add_library(Config src/Config.cpp)
+target_link_libraries(Config World absl::strings absl::time)
+
+# list_stops
+add_executable(list_stops src/list_stops.cpp)
+target_link_libraries(list_stops Config World absl::flags absl::flags_parse)
+
+# main
 add_executable(main src/main.cpp)
-target_link_libraries(main MultiSegment World Solver)
+target_link_libraries(main Config MultiSegment World Solver absl::flags absl::flags_parse)
 
 
 # Enable testing

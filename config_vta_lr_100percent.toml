@@ -1,0 +1,5 @@
+date = "2024-06-10"
+
+[[gtfs]]
+dir = "data/scratch/gtfs_vta"
+prefix = "vta-"
