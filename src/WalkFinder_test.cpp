@@ -8,7 +8,7 @@ namespace {
 
 AdjacencyList arbitraryAdjacencyList() {
   AdjacencyList result;
-  const size_t num_stops = *rc::gen::inRange<size_t>(1, 9);
+  const size_t num_stops = *rc::gen::inRange<size_t>(0, 9);
   for (size_t origin = 0; origin < num_stops; ++origin) {
     result.edges.push_back({});
     for (size_t destination = 0; destination < num_stops; ++destination) {
