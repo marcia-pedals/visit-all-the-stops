@@ -23,7 +23,11 @@ int main(int argc, char* argv[]) {
   const std::vector<std::string>& route_filter = absl::GetFlag(FLAGS_route_filter);
 
   Config config;
-  std::optional<std::string> err_opt = readConfig(positional[1], config);
+  std::optional<std::string> err_opt = readConfig(
+    positional[1],
+    {.IgnoreSegmentStopIds = true},
+    config
+  );
   if (err_opt.has_value()) {
     std::cerr << err_opt.value() << "\n";
     return 1;

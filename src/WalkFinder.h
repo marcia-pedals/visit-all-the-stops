@@ -48,7 +48,7 @@ struct RouteSearchStateDFS
 };
 
 template<typename WalkVisitor, size_t MaxStops>
-static void FindAllRoutesDFSRec(
+static void FindAllMinimalWalksDFSRec(
   WalkVisitor& visitor,
   const AdjacencyList& adjacency_list,
   const std::bitset<MaxStops> target_stops,
@@ -84,7 +84,7 @@ static void FindAllRoutesDFSRec(
   for (const size_t next_stop: adjacency_list.edges[current_stop]) {
     std::bitset<MaxStops> next_visited = current_visited;
     next_visited[next_stop] = true;
-    FindAllRoutesDFSRec(visitor, adjacency_list, target_stops, state, next_stop, next_visited);
+    FindAllMinimalWalksDFSRec(visitor, adjacency_list, target_stops, state, next_stop, next_visited);
   }
 
   state.visited_at_stop[current_stop] = old_visited_at_current_stop;
@@ -112,5 +112,5 @@ void FindAllMinimalWalksDFS(
   std::bitset<MaxStops> start_visited;
   start_visited[start] = true;
 
-  FindAllRoutesDFSRec(visitor, adjacency_list, target_stops, state, start, start_visited);
+  FindAllMinimalWalksDFSRec(visitor, adjacency_list, target_stops, state, start, start_visited);
 }

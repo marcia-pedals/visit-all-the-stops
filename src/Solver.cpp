@@ -5,6 +5,8 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_join.h"
 
+#include "WalkFinder.h"
+
 struct Segment {
   WorldTime departure_time;
   WorldTime arrival_time;
@@ -22,6 +24,9 @@ struct Problem {
 
   // segments[i] are all the segments originating from stop (index) i.
   std::vector<std::vector<GroupedSegments>> segments;
+
+  // This is the projection of segments to just a graph on stops.
+  AdjacencyList adjacency_list;
 };
 
 static size_t GetOrAddStop(const std::string& stop_id, Problem& problem) {
@@ -31,6 +36,7 @@ static size_t GetOrAddStop(const std::string& stop_id, Problem& problem) {
   problem.stop_id_to_index[stop_id] = problem.stop_index_to_id.size();
   problem.stop_index_to_id.push_back(stop_id);
   problem.segments.push_back({});
+  problem.adjacency_list.edges.push_back({});
   return problem.stop_index_to_id.size() - 1;
 }
 
@@ -51,6 +57,7 @@ static Problem BuildProblem(const World& world) {
     if (segments == nullptr) {
       problem.segments[origin_stop_index].push_back({destination_stop_index, {}});
       segments = &problem.segments[origin_stop_index].back();
+      problem.adjacency_list.edges[origin_stop_index].push_back(destination_stop_index);
     }
 
     segments->segments.push_back({
@@ -61,25 +68,6 @@ static Problem BuildProblem(const World& world) {
 
   return problem;
 }
-
-constexpr int kMaxStops = 16;
-
-struct CollectorRouteVisitor {
-  std::vector<std::vector<size_t>> routes;
-  std::vector<size_t> current;
-
-  void PushStop(size_t index) {
-    current.push_back(index);
-  }
-
-  void PopStop() {
-    current.pop_back();
-  }
-
-  void RouteEnd() {
-    routes.push_back(current);
-  }
-};
 
 static std::vector<Segment> GetMinimalConnections(
   const std::vector<Segment>& a,
@@ -105,19 +93,39 @@ static std::vector<Segment> GetMinimalConnections(
   return result;
 }
 
-void Solve(const World& world, const std::string& start_stop_id) {
+void Solve(
+  const World& world,
+  const std::string& start_stop_id,
+  const std::vector<std::string>& target_stop_ids
+) {
+  std::cout << "Building problem...\n";
   Problem problem = BuildProblem(world);
   std::cout << "Built problem with " << problem.stop_index_to_id.size() << " stops.\n";
 
-  CollectorRouteVisitor visitor;
-  // FindAllRoutes(visitor, problem, problem.stop_id_to_index.at(start_stop_id));
-  std::cout << "Found " << visitor.routes.size() << " routes.\n";
+  size_t start_stop_index = problem.stop_id_to_index.at(start_stop_id);
+  std::bitset<32> target_stops;
+  for (const std::string& stop_id : target_stop_ids) {
+    target_stops[problem.stop_id_to_index.at(stop_id)] = true;
+  }
+  if (target_stops.none()) {
+    std::cout << "No target stops.\n";
+    return;
+  }
+
+  CollectorWalkVisitor visitor;
+  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(
+    visitor,
+    problem.adjacency_list,
+    problem.stop_id_to_index.at(start_stop_id),
+    target_stops
+  );
+  std::cout << "Found " << visitor.walks.size() << " walks.\n";
 
   unsigned int best_duration = std::numeric_limits<unsigned int>::max();
   std::optional<Segment> best_segment;
   std::optional<std::vector<size_t>> best_route;
 
-  for (const std::vector<size_t>& route : visitor.routes) {
+  for (const std::vector<size_t>& route : visitor.walks) {
     std::optional<std::vector<Segment>> current_segments;
     for (size_t i = 1; i < route.size(); ++i) {
       const size_t origin = route[i - 1];

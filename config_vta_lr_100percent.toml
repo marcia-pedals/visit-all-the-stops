@@ -1,5 +1,26 @@
 date = "2024-06-10"
+start_stop_id = "vta-PS_MVTC"
+target_stop_ids = [
+  "vta-PS_MVTC",
+  "vta-PS_CHMP",
+  "vta-PS_TASM",
+  "vta-PS_BAYP",
+  "vta-PS_ALUM",
+  "vta-PS_CONV",
+  "vta-PS_WINC",
+  "vta-PS_TRSA",
+]
 
 [[gtfs]]
 dir = "data/scratch/gtfs_vta"
 prefix = "vta-"
+segment_stop_ids = [
+  "vta-PS_MVTC",
+  "vta-PS_CHMP",
+  "vta-PS_TASM",
+  "vta-PS_BAYP",
+  "vta-PS_ALUM",
+  "vta-PS_CONV",
+  "vta-PS_WINC",
+  "vta-PS_TRSA",
+]
