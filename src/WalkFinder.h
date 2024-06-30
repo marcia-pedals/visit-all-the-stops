@@ -73,7 +73,7 @@ static void FindAllRoutesDFSRec(
 
   for (std::bitset<MaxStops>& loop_abort : state.loop_aborts) {
     loop_abort[current_stop] = false;
-    if (loop_abort.none()) {
+    if ((loop_abort & target_stops).none()) {
         state.visited_at_stop[current_stop] = old_visited_at_current_stop;
         state.loop_aborts = old_loop_aborts;
         visitor.PopStop();
@@ -102,6 +102,7 @@ void FindAllMinimalWalksDFS(
   std::bitset<MaxStops> target_stops
 ) {
   assert (start < adjacency_list.edges.size());
+  assert (adjacency_list.edges.size() <= MaxStops);
 
   RouteSearchStateDFS<MaxStops> state;
   state.visited_at_stop.resize(adjacency_list.edges.size());
