@@ -225,6 +225,63 @@ TEST(
   ));
 }
 
+struct CollectorWalkVisitor_PrunesLongerThan4 {
+  std::vector<std::vector<size_t>> walks;
+  std::vector<size_t> current;
+
+  // If this returns false, this branch of the DFS is pruned.
+  // The DFS will always pop the stop, even if this returns false.
+  bool PushStop(size_t index) {
+    current.push_back(index);
+    return current.size() <= 4;
+  }
+
+  void PopStop() {
+    current.pop_back();
+  }
+
+  void WalkDone() {
+    walks.push_back(current);
+  }
+};
+
+TEST(
+  WalkFinderTest,
+  example1_prunesAt2
+) {
+  //   0 <----
+  //  / \    |
+  // v   v   |
+  // 1   2   |
+  //  \ /    |
+  //   v     |
+  //   3------
+  AdjacencyList adjacency_list;
+  adjacency_list.edges = {
+    {1, 2},
+    {3},
+    {3},
+    {0}
+  };
+  std::bitset<32> target_stops("1111");
+
+  CollectorWalkVisitor_PrunesLongerThan4 visitor;
+  FindAllMinimalWalksDFS<CollectorWalkVisitor_PrunesLongerThan4, 32>(visitor, adjacency_list, target_stops);
+  EXPECT_THAT(visitor.walks, ::testing::UnorderedElementsAre(
+    // Starting at 0.
+    // None: all are longer than 4.
+
+    // Starting at 1.
+    ::testing::ElementsAre(1, 3, 0, 2),
+
+    // Starting at 2.
+    ::testing::ElementsAre(2, 3, 0, 1)
+
+    // Starting at 3.
+    // None: all are longer than 4.
+  ));
+}
+
 TEST(
   WalkFinderTest,
   example2

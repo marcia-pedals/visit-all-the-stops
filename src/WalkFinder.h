@@ -19,8 +19,11 @@ struct CollectorWalkVisitor {
   std::vector<std::vector<size_t>> walks;
   std::vector<size_t> current;
 
-  void PushStop(size_t index) {
+  // If this returns false, this branch of the DFS is pruned.
+  // The DFS will always pop the stop, even if this returns false.
+  bool PushStop(size_t index) {
     current.push_back(index);
+    return true;
   }
 
   void PopStop() {
@@ -56,7 +59,10 @@ static void FindAllMinimalWalksDFSRec(
   size_t current_stop,
   const std::bitset<MaxStops> current_visited
 ) {
-  visitor.PushStop(current_stop);
+  if (!visitor.PushStop(current_stop)) {
+    visitor.PopStop();
+    return;
+  }
 
   if ((target_stops & current_visited) == target_stops) {
     visitor.WalkDone();
