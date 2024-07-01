@@ -1,0 +1,130 @@
+date = "2024-07-02"
+target_stop_ids = [
+  "vta-PS_MVTC",
+  "vta-PS_CHMP",
+  "vta-PS_TASM",
+  "vta-PS_BAYP",
+  "vta-PS_ALUM",
+  "vta-PS_CONV",
+  "vta-PS_WINC",
+  "vta-PS_TRSA",
+  "vta-PS_METR",
+  "vta-PS_MILP",
+  "vta-PS_JAPN",
+  "vta-PS_TAMN",
+  "vta-PS_BASC",
+  "vta-PS_SFND",
+  "vta-PS_FAIR",
+  "vta-PS_MIDD",
+  "vta-PS_OLDI",
+
+  "vta-4773", # Santa Clara St LR Station
+]
+
+[[gtfs]]
+dir = "data/scratch/gtfs_vta"
+prefix = "vta-"
+segment_stop_ids = [
+  "vta-PS_MVTC",
+  "vta-PS_CHMP",
+  "vta-PS_TASM",
+  "vta-PS_BAYP",
+  "vta-PS_ALUM",
+  "vta-PS_CONV",
+  "vta-PS_WINC",
+  "vta-PS_TRSA",
+  "vta-PS_METR",
+  "vta-PS_MILP",
+  "vta-PS_JAPN",
+  "vta-PS_BASC",
+  "vta-PS_SFND",
+  "vta-PS_DIRD",
+  "vta-PS_FAIR",
+  "vta-PS_MIDD",
+  "vta-PS_OLDI",
+
+  "vta-PS_ARTC", # Alum Rock Transit Center
+  "vta-5850", # Santa Clara & 2nd
+  "vta-3624", # Santa Clara & 2nd
+  "vta-4773", # Santa Clara St LR Station
+
+  "vta-PS_ERTC", # Eastridge Transit Center
+  "vta-PS_CPTL", # Capitol
+  "vta-3325", # Capitol Station (Bay 2)
+
+  "vta-5906", # Tamien
+  "vta-PS_TAMN", # Tamien Station
+
+  "vta-PS_CALR", # Capitol Station
+
+  "vta-PS_WITC", # Winchester Transit Center
+]
+
+# Not really, just testing
+# [[anytime_connections]]
+# origin = "vta-PS_MVTC"
+# destination = "vta-PS_DIRD"
+# duration_min = 12
+# [[anytime_connections]]
+# origin = "vta-PS_TRSA"
+# destination = "vta-PS_DIRD"
+# duration_min = 30
+# [[anytime_connections]]
+# origin = "vta-PS_TRSA"
+# destination = "vta-PS_TAMN"
+# duration_min = 23
+
+# [[anytime_connections]]
+# origin = "vta-PS_TRSA"
+# destination = "vta-PS_ALUM"
+# duration_min = 56
+
+
+
+
+[[anytime_connections]]
+origin = "vta-PS_ALUM"
+destination = "vta-4773"
+duration_min = 15
+
+[[anytime_connections]]
+origin = "vta-PS_CALR"
+destination = "vta-PS_WINC"
+duration_min = 25
+
+
+
+[[anytime_connections]]
+origin = "vta-PS_ARTC"
+destination = "vta-PS_ALUM"
+duration_min = 0
+
+[[anytime_connections]]
+origin = "vta-5850"
+destination = "vta-4773"
+duration_min = 1
+
+[[anytime_connections]]
+origin = "vta-3624"
+destination = "vta-4773"
+duration_min = 1
+
+[[anytime_connections]]
+origin = "vta-3325"
+destination = "vta-PS_CPTL"
+duration_min = 1
+
+[[anytime_connections]]
+origin = "vta-PS_CALR"
+destination = "vta-PS_CPTL"
+duration_min = 1
+
+[[anytime_connections]]
+origin = "vta-5906"
+destination = "vta-PS_TAMN"
+duration_min = 1
+
+[[anytime_connections]]
+origin = "vta-PS_WINC"
+destination = "vta-PS_WITC"
+duration_min = 0

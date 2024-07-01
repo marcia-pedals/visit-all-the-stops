@@ -113,21 +113,39 @@ static Problem BuildProblem(const World& world) {
 
 static std::vector<Segment> GetMinimalConnections(
   const std::vector<Segment>& a,
-  const std::vector<Segment>& b
+  const std::vector<Segment>& b,
+  const unsigned int min_transfer_seconds
 ) {
   std::vector<Segment> result;
+
+  // TODO: Think harder about whether this is really correct.
+  // Like you might have an earlier segment that is worse than a later one because it goes faster or
+  // because it's on a different/same trip_id.
+  
+  auto get_min_transfer_seconds = [&a, &b, min_transfer_seconds](size_t ai, size_t bi) -> unsigned int {
+    if (a[ai].trip_index == b[bi].trip_index) {
+      return 0;
+    }
+    return min_transfer_seconds;
+  };
 
   size_t a_index = 0;
   size_t b_index = 0;
   while (a_index < a.size()) {
-    while (b_index < b.size() & b[b_index].departure_time.seconds < a[a_index].arrival_time.seconds) {
+    while (
+      (b_index < b.size()) &&
+      (b[b_index].departure_time.seconds < a[a_index].arrival_time.seconds + get_min_transfer_seconds(a_index, b_index)) 
+     ) {
       ++b_index;
     }
     if (b_index == b.size()) {
       break;
     }
-    if (a_index == a.size() - 1 || a[a_index + 1].arrival_time.seconds > b[b_index].departure_time.seconds) {
-      result.push_back({a[a_index].departure_time, b[b_index].arrival_time});
+    if (
+      (a_index == a.size() - 1) || 
+      (a[a_index + 1].arrival_time.seconds + get_min_transfer_seconds(a_index + 1, b_index) > b[b_index].departure_time.seconds)
+    ) {
+      result.push_back({a[a_index].departure_time, b[b_index].arrival_time, b[b_index].trip_index});
     }
     ++a_index;
   }
@@ -220,7 +238,15 @@ struct SolverWalkVisitor {
     } else {
       // Handle the segments!
       if (prev_state.segments.has_value()) {
-        state.segments = GetMinimalConnections(prev_state.segments.value(), *prev_to_cur_segments);
+        // TODO: Make this configurable.
+        const unsigned int min_transfer_seconds = (
+          problem.stop_id_to_index.at("bart-place_COLS") == prev_state.stop_index ? 1 * 60 : 0 * 60
+        );
+        state.segments = GetMinimalConnections(
+          prev_state.segments.value(),
+          *prev_to_cur_segments,
+          min_transfer_seconds
+        );
       } else {
         state.segments = *prev_to_cur_segments;
       }
@@ -414,6 +440,7 @@ void Solve(
         std::vector<PrettyPrintWalkState>& next_states = walk_states.back();
         for (PrettyPrintWalkState& current_state : current_states) {
           for (const Segment& segment : *next_segments) {
+            // TODO: Implement min_transfer_seconds here.
             if (segment.departure_time.seconds >= current_state.arrival_time.seconds) {
               current_state.departure_time = segment.departure_time;
               current_state.departure_trip_index = segment.trip_index;
@@ -486,11 +513,11 @@ void Solve(
         return state.departure_trip_index == 0;
       });
 
-      unsigned int max_connection_time = 0;
-      unsigned int min_connection_time = std::numeric_limits<unsigned int>::max();
+      int max_connection_time = std::numeric_limits<int>::min();
+      int min_connection_time = std::numeric_limits<int>::max();
       for (size_t j = 0; j < arrival_times.size(); ++j) {
         if (arrival_times[j].has_value() && departure_times[j].has_value()) {
-          unsigned int connection_time = departure_times[j].value().seconds - arrival_times[j].value().seconds;
+          int connection_time = ((int)departure_times[j].value().seconds) - ((int)arrival_times[j].value().seconds);
           max_connection_time = std::max(max_connection_time, connection_time);
           min_connection_time = std::min(min_connection_time, connection_time);
         }
@@ -510,9 +537,9 @@ void Solve(
         if (walkBike) {
           std::cout << "   (walk/bike)\n";
         } else if (min_connection_time == max_connection_time) {
-          std::cout << absl::StreamFormat("   (%um)\n", min_connection_time / 60);
+          std::cout << absl::StreamFormat("   (%dm)\n", min_connection_time / 60);
         } else {
-          std::cout << absl::StreamFormat("   (%u-%um)\n", min_connection_time / 60, max_connection_time / 60);
+          std::cout << absl::StreamFormat("   (%d to %dm)\n", min_connection_time / 60, max_connection_time / 60);
         }
       }
       std::cout << "\n";

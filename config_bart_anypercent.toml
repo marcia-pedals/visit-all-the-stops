@@ -14,6 +14,7 @@ target_stop_ids = [
   "bart-place_WOAK",
   "bart-place_BALB",
   "bart-place_MLBR",
+  "bart-place_WCRK",
 ]
 
 [[gtfs]]
@@ -44,16 +45,64 @@ segment_stop_ids = [
   "bart-place_WOAK",
   "bart-place_BALB",
   "bart-place_MLBR",
+  "bart-place_WCRK",
+  "bart-place_FRMT",
 
   "bart-place_EMBR",
+]
+
+[[gtfs]]
+dir = "data/scratch/SJJPA_GTFS"
+prefix = "sjj-"
+segment_stop_ids = [
+  "sjj-ACA",
+  "sjj-RIC",
 ]
 
 [[anytime_connections]]
 origin = "caltrain-place_MLBR"
 destination = "bart-place_MLBR"
-duration_min = 2
+duration_min = 0
 
 [[anytime_connections]]
 origin = "caltrain-san_francisco"
 destination = "bart-place_EMBR"
-duration_min = 10
+duration_min = 6
+
+[[anytime_connections]]
+origin = "caltrain-sj_diridon"
+destination = "bart-BERY"
+duration_min = 20
+
+# [[anytime_connections]]
+# origin = "sjj-ACA"
+# destination = "bart-place_ANTC"
+# duration_min = 5
+
+# [[anytime_connections]]
+# origin = "sjj-RIC"
+# destination = "bart-place_RICH"
+# duration_min = 0
+
+# # fake ACE
+# [[anytime_connections]]
+# origin = "bart-place_DUBL"
+# destination = "caltrain-sj_diridon"
+# # 20 mins BART -> ACE Pleasanton
+# # 60 mins ACE Pleasanton -> SJ Diridon
+# duration_min = 80
+# [[anytime_connections]]
+# origin = "bart-place_DUBL"
+# destination = "bart-place_BERY"
+# # 20 mins BART -> ACE Pleasanton
+# # 50 mins ACE Pleasanton -> SCC
+# # 20 mins SCC -> Berryessa
+# duration_min = 90
+# [[anytime_connections]]
+# origin = "bart-place_DUBL"
+# destination = "bart-place_FRMT"
+# # 20 mins BART -> ACE Pleasanton
+# # 20 mins ACE Pleasanton -> ACE Fremont
+# # 20 mins ACE Fremont -> BART
+# duration_min = 50
+
