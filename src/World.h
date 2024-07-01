@@ -56,6 +56,7 @@ struct WorldSegment {
   std::string origin_stop_id;
   std::string destination_stop_id;
   std::string route_id;
+  std::string trip_id;
 };
 
 struct WorldTripStopTimes {

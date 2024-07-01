@@ -11,7 +11,7 @@ struct Segment {
   WorldTime departure_time;
   WorldTime arrival_time;
 
-  size_t route_index;
+  size_t trip_index;
 };
 
 struct GroupedSegments {
@@ -28,8 +28,8 @@ struct Problem {
   // Mappings between World and Problem ids/indices.
   absl::flat_hash_map<std::string, size_t> stop_id_to_index;
   std::vector<std::string> stop_index_to_id;
-  absl::flat_hash_map<std::string, size_t> route_id_to_index;
-  std::vector<std::string> route_index_to_id;
+  absl::flat_hash_map<std::string, size_t> trip_id_to_index;
+  std::vector<std::string> trip_index_to_id;
 
   // segments[i] are all the segments originating from stop (index) i.
   std::vector<std::vector<GroupedSegments>> segments;
@@ -53,20 +53,20 @@ static size_t GetOrAddStop(const std::string& stop_id, Problem& problem) {
   return problem.stop_index_to_id.size() - 1;
 }
 
-static size_t GetOrAddRoute(const std::string& route_id, Problem& problem) {
-  if (problem.route_id_to_index.contains(route_id)) {
-    return problem.route_id_to_index.at(route_id);
+static size_t GetOrAddTrip(const std::string& trip_id, Problem& problem) {
+  if (problem.trip_id_to_index.contains(trip_id)) {
+    return problem.trip_id_to_index.at(trip_id);
   }
-  problem.route_id_to_index[route_id] = problem.route_index_to_id.size();
-  problem.route_index_to_id.push_back(route_id);
-  return problem.route_index_to_id.size() - 1;
+  problem.trip_id_to_index[trip_id] = problem.trip_index_to_id.size();
+  problem.trip_index_to_id.push_back(trip_id);
+  return problem.trip_index_to_id.size() - 1;
 }
 
 static Problem BuildProblem(const World& world) {
   Problem problem;
 
-  // Reserve route_id = 0 for anytime connections.
-  GetOrAddRoute("anytime", problem);
+  // Reserve trip_id = 0 for anytime connections.
+  GetOrAddTrip("anytime", problem);
 
   for (const auto& world_segment : world.segments) {
     size_t origin_stop_index = GetOrAddStop(world_segment.origin_stop_id, problem);
@@ -88,7 +88,7 @@ static Problem BuildProblem(const World& world) {
     segments->segments.push_back({
       .departure_time = world_segment.departure_time,
       .arrival_time = WorldTime(world_segment.departure_time.seconds + world_segment.duration.seconds),
-      .route_index = GetOrAddRoute(world_segment.route_id, problem),
+      .trip_index = GetOrAddTrip(world_segment.trip_id, problem),
     });
   }
 
@@ -210,7 +210,7 @@ struct SolverWalkVisitor {
         state.segments = prev_state.segments;
         for (Segment& segment : *state.segments) {
           segment.arrival_time = WorldTime(segment.arrival_time.seconds + anytime_connection->duration.seconds);
-          segment.route_index = 0;
+          segment.trip_index = 0;
         }
       } else {
         // We don't support anytime connections from the start. Prune.
@@ -272,7 +272,7 @@ struct SolverWalkVisitor {
 struct PrettyPrintWalkState {
   WorldTime arrival_time;
   std::optional<WorldTime> departure_time;
-  std::optional<size_t> departure_route_index;
+  std::optional<size_t> departure_trip_index;
 };
 
 void Solve(
@@ -339,7 +339,7 @@ void Solve(
   //         } else {
   //           for (Segment& segment : *current_segments) {
   //             segment.arrival_time = WorldTime(segment.arrival_time.seconds + anytime_connection->duration.seconds);
-  //             segment.route_index = 0;
+  //             segment.trip_index = 0;
   //           }
   //         }
   //       }
@@ -364,7 +364,7 @@ void Solve(
   //       const unsigned int duration = segment.arrival_time.seconds - segment.departure_time.seconds;
   //       if (duration < best_duration) {
   //         // std::cout << "duration: " << duration << "\n";
-  //         // std::cout << absl::StrCat(segment.departure_time, " -> ", segment.arrival_time, " ", segment.route_index, "\n");
+  //         // std::cout << absl::StrCat(segment.departure_time, " -> ", segment.arrival_time, " ", segment.trip_index, "\n");
   //         best_duration = duration;
   //         best_walks.clear();
   //         pushed_this_walk = false;
@@ -416,8 +416,8 @@ void Solve(
           for (const Segment& segment : *next_segments) {
             if (segment.departure_time.seconds >= current_state.arrival_time.seconds) {
               current_state.departure_time = segment.departure_time;
-              current_state.departure_route_index = segment.route_index;
-              next_states.push_back({segment.arrival_time, segment.route_index});
+              current_state.departure_trip_index = segment.trip_index;
+              next_states.push_back({segment.arrival_time, segment.trip_index});
               break;
             }
           }
@@ -438,7 +438,7 @@ void Solve(
         std::vector<PrettyPrintWalkState>& next_states = walk_states.back();
         for (PrettyPrintWalkState& current_state : current_states) {
           current_state.departure_time = current_state.arrival_time;
-          current_state.departure_route_index = 0;
+          current_state.departure_trip_index = 0;
           next_states.push_back({
             WorldTime(current_state.departure_time->seconds + anytime_connection->duration.seconds),
             std::nullopt
@@ -465,7 +465,7 @@ void Solve(
         if (
           i == 0 ||
           i == best_walk.walk.size() - 1 ||
-          state.departure_route_index != walk_states[i - 1][j].departure_route_index
+          state.departure_trip_index != walk_states[i - 1][j].departure_trip_index
         ) {
           arrival_times.push_back(state.arrival_time);
           departure_times.push_back(state.departure_time);
@@ -483,7 +483,7 @@ void Solve(
       }
 
       const bool walkBike = std::all_of(walk_states[i].begin(), walk_states[i].end(), [](const auto& state) {
-        return state.departure_route_index == 0;
+        return state.departure_trip_index == 0;
       });
 
       unsigned int max_connection_time = 0;

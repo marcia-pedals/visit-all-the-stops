@@ -248,7 +248,8 @@ std::optional<std::string> readGTFSToWorld(
         .duration = duration,
         .origin_stop_id = origin_stop_id,
         .destination_stop_id = destination_stop_id,
-        .route_id = trip.route_id
+        .route_id = trip.route_id,
+        .trip_id = entry.first,
       });
 
       prev = stop_time;
