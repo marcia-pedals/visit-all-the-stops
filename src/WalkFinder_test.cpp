@@ -91,6 +91,9 @@ TEST(
 
   // Doesn't hit all the target stops.
   EXPECT_FALSE(isMinimalWalk({0, 1, 0, 2}, 4, std::bitset<4>("1101")));
+
+  // "0" and "1" are not target stops, so you can remove the whole loop from 0 to 0.
+  EXPECT_FALSE(isMinimalWalk({0, 1, 0, 2, 3}, 4, std::bitset<4>("1100")));
 }
 
 RC_GTEST_PROP(

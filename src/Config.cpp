@@ -51,5 +51,21 @@ std::optional<std::string> readConfig(
     }
   }
 
+  if (config_table.get("anytime_connections") != nullptr) {
+    const toml::array* anytime_arr = config_table.at("anytime_connections").as_array();
+    for (size_t i = 0; i < anytime_arr->size(); ++i) {
+      const toml::table* anytime_el = anytime_arr->at(i).as_table();
+      WorldAnytimeConnection connection;
+      connection.origin_stop_id = anytime_el->at("origin").as_string()->get();
+      connection.destination_stop_id = anytime_el->at("destination").as_string()->get();
+      connection.duration = WorldDuration(anytime_el->at("duration_min").as_integer()->get() * 60);
+      config.world.anytime_connections.push_back(connection);
+
+      // Also add the reverse connection!!
+      std::swap(connection.origin_stop_id, connection.destination_stop_id);
+      config.world.anytime_connections.push_back(connection);
+    }
+  }
+
   return std::nullopt;
 }

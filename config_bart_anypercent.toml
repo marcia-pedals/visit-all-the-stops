@@ -1,13 +1,59 @@
 date = "2024-06-10"
+target_stop_ids = [
+  "bart-place_LAKE",
+  "bart-place_BERY",
+  "bart-place_DUBL",
+  "bart-place_BAYF",
+  "bart-OAKL",
+  "bart-place_COLS",
+  "bart-place_ANTC",
+  "bart-place_RICH",
+  "bart-place_MCAR",
+  "bart-place_19TH",
+  "bart-place_12TH",
+  "bart-place_WOAK",
+  "bart-place_BALB",
+  "bart-place_MLBR",
+]
 
 [[gtfs]]
 dir = "data/fetched-2024-06-08/caltrain"
 prefix = "caltrain-"
 segment_stop_ids = [
-  "caltrain-sunnyvale",
-  "caltrain-california_ave",
+  "caltrain-san_francisco",
+  "caltrain-22nd_street",
+  "caltrain-place_MLBR",
+  "caltrain-sj_diridon",
 ]
 
 [[gtfs]]
 dir = "data/fetched-2024-06-08/bart"
 prefix = "bart-"
+segment_stop_ids = [
+  "bart-place_LAKE",
+  "bart-place_BERY",
+  "bart-place_DUBL",
+  "bart-place_BAYF",
+  "bart-OAKL",
+  "bart-place_COLS",
+  "bart-place_ANTC",
+  "bart-place_RICH",
+  "bart-place_MCAR",
+  "bart-place_19TH",
+  "bart-place_12TH",
+  "bart-place_WOAK",
+  "bart-place_BALB",
+  "bart-place_MLBR",
+
+  "bart-place_EMBR",
+]
+
+[[anytime_connections]]
+origin = "caltrain-place_MLBR"
+destination = "bart-place_MLBR"
+duration_min = 2
+
+[[anytime_connections]]
+origin = "caltrain-san_francisco"
+destination = "bart-place_EMBR"
+duration_min = 10

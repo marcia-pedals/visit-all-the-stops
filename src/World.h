@@ -26,6 +26,7 @@ struct WorldTime {
 struct WorldDuration {
   unsigned int seconds;
 
+  WorldDuration() : seconds(0) {}
   WorldDuration(unsigned int seconds) : seconds(seconds) {}
 
   template <typename Sink>
@@ -68,11 +69,18 @@ struct WorldTrip {
   std::vector<WorldTripStopTimes> stop_times;
 };
 
+struct WorldAnytimeConnection {
+  std::string origin_stop_id;
+  std::string destination_stop_id;
+  WorldDuration duration;
+};
+
 struct World {
   std::map<std::string, WorldRoute> routes;
   std::map<std::string, WorldStop> stops;
   std::map<std::string, WorldTrip> trips;
   std::vector<WorldSegment> segments;
+  std::vector<WorldAnytimeConnection> anytime_connections;
 
   void prettyRoutes(std::string& result) const;
   void prettyDepartureTable(const std::string& stop_id, const std::optional<std::string>& line_name, std::string& result) const;
