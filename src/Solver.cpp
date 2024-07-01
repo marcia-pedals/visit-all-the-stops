@@ -140,6 +140,135 @@ struct BestWalk {
   std::vector<WorldTime> start_times;
 };
 
+struct SolverWalkVisitorState {
+  size_t stop_index;
+
+  // When this has no value, it means that you can take any segment out of this stop. This can
+  // happen on the start, and can also happen if we take anytime connection(s) from the start.
+  // Though we currently don't allow taking anytime connection(s) from the start -- we'd need to
+  // keep track of their duration somewhere to support that.
+  std::optional<std::vector<Segment>> segments;
+};
+
+static const std::vector<Segment>* GetSegments(
+  const Problem& problem,
+  size_t origin_stop_index,
+  size_t destination_stop_index
+) {
+  for (const GroupedSegments& edge : problem.segments[origin_stop_index]) {
+    if (edge.destination_stop_index == destination_stop_index) {
+      return &edge.segments;
+    }
+  }
+  return nullptr;
+}
+
+static const AnytimeConnection* GetAnytimeConnection(
+  const Problem& problem,
+  size_t origin_stop_index,
+  size_t destination_stop_index
+) {
+  for (const AnytimeConnection& connection : problem.anytime_connections[origin_stop_index]) {
+    if (connection.destination_stop_index == destination_stop_index) {
+      return &connection;
+    }
+  }
+  return nullptr;
+}
+
+struct SolverWalkVisitor {
+  const Problem& problem;
+
+  unsigned int best_duration = std::numeric_limits<unsigned int>::max();
+  std::vector<BestWalk> best_walks;
+
+  std::vector<SolverWalkVisitorState> stack;
+
+  // If this returns false, this branch of the DFS is pruned.
+  // The DFS will always pop the stop, even if this returns false.
+  bool PushStop(size_t stop_index) {
+    stack.push_back({stop_index, std::nullopt});
+    SolverWalkVisitorState& state = stack.back();
+
+    if (stack.size() == 1) {
+      state.segments = std::nullopt;
+      return true;
+    }
+
+    const SolverWalkVisitorState& prev_state = stack[stack.size() - 2];
+    const std::vector<Segment>* prev_to_cur_segments = GetSegments(problem, prev_state.stop_index, stop_index);
+    if (prev_to_cur_segments == nullptr) {
+      const AnytimeConnection* anytime_connection = GetAnytimeConnection(problem, prev_state.stop_index, stop_index);
+      if (anytime_connection == nullptr) {
+        // There are no segments or anytime connections, so prune.
+        state.segments = {};
+        return false;
+      }
+
+      // Handle the anytime connection!
+      if (prev_state.segments.has_value()) {
+        state.segments = prev_state.segments;
+        for (Segment& segment : *state.segments) {
+          segment.arrival_time = WorldTime(segment.arrival_time.seconds + anytime_connection->duration.seconds);
+          segment.route_index = 0;
+        }
+      } else {
+        // We don't support anytime connections from the start. Prune.
+        state.segments = {};
+        return false;
+      }
+    } else {
+      // Handle the segments!
+      if (prev_state.segments.has_value()) {
+        state.segments = GetMinimalConnections(prev_state.segments.value(), *prev_to_cur_segments);
+      } else {
+        state.segments = *prev_to_cur_segments;
+      }
+    }
+
+    const unsigned int captured_best_duration = best_duration;
+    std::erase_if(*state.segments, [captured_best_duration](const Segment& segment) {
+      return segment.arrival_time.seconds - segment.departure_time.seconds > captured_best_duration;
+    });
+
+    // Prune iff we have no segments left.
+    return !state.segments->empty();
+  }
+
+  void PopStop() {
+    stack.pop_back();
+  }
+
+  void WalkDone() {
+    if (stack.size() == 0 || !stack.back().segments.has_value()) {
+      // TODO: Actually in this case, the empty walk or the anytime-only walk is probably actually a
+      // solution and we should account for it.
+      return;
+    }
+
+    bool pushed_this_walk = false;
+    for (const Segment& segment : *stack.back().segments) {
+      const unsigned int duration = segment.arrival_time.seconds - segment.departure_time.seconds;
+      if (duration < best_duration) {
+        std::cout << absl::StrCat("improved duration: ", WorldDuration(duration), "\n");
+        best_duration = duration;
+        best_walks.clear();
+        pushed_this_walk = false;
+      }
+      if (duration == best_duration) {
+        if (!pushed_this_walk) {
+          best_walks.push_back({{}, {}});
+          for (const SolverWalkVisitorState& state : stack) {
+            best_walks.back().walk.push_back(state.stop_index);
+          }
+          pushed_this_walk = true;
+        }
+        best_walks.back().start_times.push_back(segment.departure_time);
+      }
+    }
+  }
+};
+
 struct PrettyPrintWalkState {
   WorldTime arrival_time;
   std::optional<WorldTime> departure_time;
@@ -163,98 +292,97 @@ void Solve(
     return;
   }
 
-  CollectorWalkVisitor visitor;
-  FindAllMinimalWalksDFS<CollectorWalkVisitor, 32>(
+  SolverWalkVisitor visitor{.problem = problem};
+  FindAllMinimalWalksDFS<SolverWalkVisitor, 32>(
     visitor,
     problem.adjacency_list,
     target_stops
   );
-  std::cout << "Found " << visitor.walks.size() << " walks.\n";
 
-  unsigned int best_duration = std::numeric_limits<unsigned int>::max();
-  std::vector<BestWalk> best_walks;
+  // unsigned int best_duration = std::numeric_limits<unsigned int>::max();
+  // std::vector<BestWalk> best_walks;
 
-  size_t processed_count = 0;
-  for (const std::vector<size_t>& walk : visitor.walks) {
-    if (processed_count % 1000000 == 0) {
-      std::cout << "Processed " << processed_count << " walks.\n";
-    }
-    ++processed_count;
+  // size_t processed_count = 0;
+  // for (const std::vector<size_t>& walk : visitor.walks) {
+  //   if (processed_count % 1000000 == 0) {
+  //     std::cout << "Processed " << processed_count << " walks.\n";
+  //   }
+  //   ++processed_count;
 
-    std::optional<std::vector<Segment>> current_segments;
-    for (size_t i = 1; i < walk.size(); ++i) {
-      const size_t origin = walk[i - 1];
-      const size_t destination = walk[i];
+  //   std::optional<std::vector<Segment>> current_segments;
+  //   for (size_t i = 1; i < walk.size(); ++i) {
+  //     const size_t origin = walk[i - 1];
+  //     const size_t destination = walk[i];
 
-      const std::vector<Segment>* next_segments = nullptr;
-      for (const GroupedSegments& edge : problem.segments[origin]) {
-        if (edge.destination_stop_index == destination) {
-          next_segments = &edge.segments;
-          break;
-        }
-      }
+  //     const std::vector<Segment>* next_segments = nullptr;
+  //     for (const GroupedSegments& edge : problem.segments[origin]) {
+  //       if (edge.destination_stop_index == destination) {
+  //         next_segments = &edge.segments;
+  //         break;
+  //       }
+  //     }
 
-      if (next_segments == nullptr) {
-        const AnytimeConnection* anytime_connection = nullptr;
-        for (const AnytimeConnection& connection : problem.anytime_connections[origin]) {
-          if (connection.destination_stop_index == destination) {
-            anytime_connection = &connection;
-            break;
-          }
-        }
-        if (anytime_connection == nullptr) {
-          current_segments = {};
-        } else {
-          if (!current_segments.has_value()) {
-            // Starting on an anytime connection is not supported.
-            current_segments = {};
-          } else {
-            for (Segment& segment : *current_segments) {
-              segment.arrival_time = WorldTime(segment.arrival_time.seconds + anytime_connection->duration.seconds);
-              segment.route_index = 0;
-            }
-          }
-        }
-      } else if (current_segments.has_value()) {
-        // TODO: Could probably update current_segments inplace?
-        current_segments = GetMinimalConnections(*current_segments, *next_segments);
-      } else {
-        current_segments = *next_segments;
-      }
+  //     if (next_segments == nullptr) {
+  //       const AnytimeConnection* anytime_connection = nullptr;
+  //       for (const AnytimeConnection& connection : problem.anytime_connections[origin]) {
+  //         if (connection.destination_stop_index == destination) {
+  //           anytime_connection = &connection;
+  //           break;
+  //         }
+  //       }
+  //       if (anytime_connection == nullptr) {
+  //         current_segments = {};
+  //       } else {
+  //         if (!current_segments.has_value()) {
+  //           // Starting on an anytime connection is not supported.
+  //           current_segments = {};
+  //         } else {
+  //           for (Segment& segment : *current_segments) {
+  //             segment.arrival_time = WorldTime(segment.arrival_time.seconds + anytime_connection->duration.seconds);
+  //             segment.route_index = 0;
+  //           }
+  //         }
+  //       }
+  //     } else if (current_segments.has_value()) {
+  //       // TODO: Could probably update current_segments inplace?
+  //       current_segments = GetMinimalConnections(*current_segments, *next_segments);
+  //     } else {
+  //       current_segments = *next_segments;
+  //     }
 
-      std::erase_if(*current_segments, [best_duration](const Segment& segment) {
-        return segment.arrival_time.seconds - segment.departure_time.seconds > best_duration;
-      });
-      if (current_segments->empty()) {
-        break;
-      }
-    }
+  //     std::erase_if(*current_segments, [best_duration](const Segment& segment) {
+  //       return segment.arrival_time.seconds - segment.departure_time.seconds > best_duration;
+  //     });
+  //     if (current_segments->empty()) {
+  //       break;
+  //     }
+  //   }
 
-    bool pushed_this_walk = false;
-    if (current_segments.has_value()) {
-      for (const Segment& segment : *current_segments) {
-        const unsigned int duration = segment.arrival_time.seconds - segment.departure_time.seconds;
-        if (duration < best_duration) {
-          // std::cout << "duration: " << duration << "\n";
-          // std::cout << absl::StrCat(segment.departure_time, " -> ", segment.arrival_time, " ", segment.route_index, "\n");
-          best_duration = duration;
-          best_walks.clear();
-          pushed_this_walk = false;
-        }
-        if (duration == best_duration) {
-          if (!pushed_this_walk) {
-            best_walks.push_back({walk, {}});
-            pushed_this_walk = true;
-          }
-          best_walks.back().start_times.push_back(segment.departure_time);
-        }
-      }
-    }
-  }
+  //   bool pushed_this_walk = false;
+  //   if (current_segments.has_value()) {
+  //     for (const Segment& segment : *current_segments) {
+  //       const unsigned int duration = segment.arrival_time.seconds - segment.departure_time.seconds;
+  //       if (duration < best_duration) {
+  //         // std::cout << "duration: " << duration << "\n";
+  //         // std::cout << absl::StrCat(segment.departure_time, " -> ", segment.arrival_time, " ", segment.route_index, "\n");
+  //         best_duration = duration;
+  //         best_walks.clear();
+  //         pushed_this_walk = false;
+  //       }
+  //       if (duration == best_duration) {
+  //         if (!pushed_this_walk) {
+  //           best_walks.push_back({walk, {}});
+  //           pushed_this_walk = true;
+  //         }
+  //         best_walks.back().start_times.push_back(segment.departure_time);
+  //       }
+  //     }
+  //   }
+  // }
 
-  std::cout << "Best duration: " << absl::StrCat(WorldDuration(best_duration), "\n");
+  std::cout << "Best duration: " << absl::StrCat(WorldDuration(visitor.best_duration), "\n");
 
-  for (const BestWalk& best_walk : best_walks) {
+  for (const BestWalk& best_walk : visitor.best_walks) {
     std::cout << "Start times: " << absl::StrJoin(best_walk.start_times, " ") << "\n";
     std::cout << "Route: ";
     for (size_t i = 0; i < best_walk.walk.size(); ++i) {
@@ -392,7 +520,3 @@ void Solve(
     std::cout << "\n";
   }
 }
-
-// The obvious next big optimization is to do the route time calculation in the walk visitor, so that we can
-// prune too-long walks early. Also even without pruning, this would save duplicate effort
-// calculating timings on walks with common prefixes.

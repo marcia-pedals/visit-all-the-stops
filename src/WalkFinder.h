@@ -108,6 +108,7 @@ void FindAllMinimalWalksDFS(
 ) {
   assert (adjacency_list.edges.size() <= MaxStops);
 
+  size_t processed_starts = 0;
   for (size_t start = 0; start < adjacency_list.edges.size(); ++start) {
     if (!target_stops[start]) {
       continue;
@@ -117,5 +118,8 @@ void FindAllMinimalWalksDFS(
     std::bitset<MaxStops> start_visited;
     start_visited[start] = true;
     FindAllMinimalWalksDFSRec(visitor, adjacency_list, target_stops, state, start, start_visited);
+
+    processed_starts += 1;
+    std::cout << "processed " << processed_starts << " of " << target_stops.count() << "\n";
   }
 }
