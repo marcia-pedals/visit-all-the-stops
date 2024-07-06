@@ -298,6 +298,87 @@ struct SolverWalkVisitor {
   }
 };
 
+static void AssertSymmetric(const AdjacencyList& adjacency_list) {
+  AdjacencyList transposed;
+  transposed.edges.resize(adjacency_list.edges.size());
+  for (size_t i = 0; i < adjacency_list.edges.size(); ++i) {
+    for (size_t j : adjacency_list.edges[i]) {
+      transposed.edges[j].push_back(i);
+    }
+  }
+  for (size_t i = 0; i < adjacency_list.edges.size(); ++i) {
+    auto a = adjacency_list.edges[i];
+    auto b = transposed.edges[i];
+    std::sort(a.begin(), a.end());
+    std::sort(b.begin(), b.end());
+    if (a != b) {
+      throw std::runtime_error("Adjacency list is not symmetric.");
+    }
+  }
+}
+
+static GroupedSegments CombineSegments(
+  const Problem& problem,
+  const size_t a,
+  const size_t b,
+  const size_t c
+) {
+  GroupedSegments result;
+  return result;
+}
+
+// Deletes all degree-2 stops and creates combined segments for them.
+// This is "naive" because a solution to the pruned problem might not solve the original problem.
+static Problem NaivePruneProblem(const Problem& problem) {
+  AssertSymmetric(problem.adjacency_list);
+
+  Problem pruned;
+
+  // The trips stay the same.
+  pruned.trip_id_to_index = problem.trip_id_to_index;
+  pruned.trip_index_to_id = problem.trip_index_to_id;
+
+  // Figure out which stops to keep.
+  std::unordered_map<size_t, size_t> old_to_new_stop_index;
+  std::unordered_map<size_t, size_t> new_to_old_stop_index;
+  {
+    size_t new_stop_index = 0;
+    for (size_t old_stop_index = 0; old_stop_index < problem.adjacency_list.edges.size(); ++old_stop_index) {
+      if (problem.adjacency_list.edges[old_stop_index].size() > 2) {
+        // Keep the stop!
+        old_to_new_stop_index[old_stop_index] = new_stop_index;
+        new_to_old_stop_index[new_stop_index] = old_stop_index;
+        ++new_stop_index;
+      }
+    }
+  }
+
+  // Now we can build a few more things.
+  pruned.stop_id_to_index.reserve(new_to_old_stop_index.size());
+  pruned.stop_index_to_id.resize(new_to_old_stop_index.size());
+  for (size_t new_stop_index = 0; new_stop_index < pruned.stop_index_to_id.size(); ++new_stop_index) {
+    size_t old_stop_index = new_to_old_stop_index[new_stop_index];
+    pruned.stop_id_to_index[problem.stop_index_to_id[old_stop_index]] = new_stop_index;
+    pruned.stop_index_to_id[new_stop_index] = problem.stop_index_to_id[old_stop_index];
+  }
+
+  // Ok so now we need to build the adjacency list and the segments and the "anytime connections".
+  // This is a bit tricky because we might have pruned adjacent stops, so we kinda need to traverse
+  // the whole pruned sections to construct the new stuff.
+  // We're gonna do this by starting at each non-pruned "new" stop and looking for all the stuff it
+  // connects to, allowing multiple hops through pruned stops.
+  pruned.segments.resize(new_to_old_stop_index.size());
+  pruned.anytime_connections.resize(new_to_old_stop_index.size());
+  pruned.adjacency_list.edges.resize(new_to_old_stop_index.size());
+
+  // Okay, this is pretty much the same as the segment extension logic in SolverWalkVisitor, so I
+  // should factor that out. But in this case, it is important to support AnytimeConnections at the
+  // start, so first I need to add support for that, by changing AnytimeConnections to be handled
+  // more uniformly with Segments.
+
+  return pruned;
+}
+
 struct PrettyPrintWalkState {
   WorldTime arrival_time;
   std::optional<WorldTime> departure_time;
@@ -311,6 +392,9 @@ void Solve(
   std::cout << "Building problem...\n";
   Problem problem = BuildProblem(world);
   std::cout << "Built problem with " << problem.stop_index_to_id.size() << " stops.\n";
+
+  NaivePruneProblem(problem);
+  // return;
 
   std::bitset<32> target_stops;
   for (const std::string& stop_id : target_stop_ids) {
