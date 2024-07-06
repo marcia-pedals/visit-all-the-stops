@@ -1,4 +1,4 @@
-date = "2024-06-10"
+date = "2024-06-12"
 target_stop_ids = [
   "bart-place_LAKE",
   "bart-place_BERY",
@@ -25,6 +25,7 @@ segment_stop_ids = [
   "caltrain-22nd_street",
   "caltrain-place_MLBR",
   "caltrain-sj_diridon",
+  "caltrain-palo_alto",
 ]
 
 [[gtfs]]
@@ -47,27 +48,40 @@ segment_stop_ids = [
   "bart-place_MLBR",
   "bart-place_WCRK",
   "bart-place_FRMT",
+  "bart-place_UCTY",
 
   "bart-place_EMBR",
 ]
 
-[[gtfs]]
-dir = "data/scratch/SJJPA_GTFS"
-prefix = "sjj-"
-segment_stop_ids = [
-  "sjj-ACA",
-  "sjj-RIC",
-]
+# [[gtfs]]
+# dir = "data/scratch/SJJPA_GTFS"
+# prefix = "sjj-"
+# segment_stop_ids = [
+#   "sjj-ACA",
+#   "sjj-RIC",
+# ]
 
 [[anytime_connections]]
 origin = "caltrain-place_MLBR"
 destination = "bart-place_MLBR"
 duration_min = 0
 
+# [[anytime_connections]]
+# origin = "caltrain-san_francisco"
+# destination = "bart-place_EMBR"
+# duration_min = 9
+
 [[anytime_connections]]
-origin = "caltrain-san_francisco"
-destination = "bart-place_EMBR"
-duration_min = 6
+origin = "caltrain-palo_alto"
+destination = "bart-place_UCTY"
+duration_min = 10
+
+
+# [[anytime_connections]]
+# origin = "caltrain-san_francisco"
+# destination = "bart-place_POWL"
+# duration_min = 8
+
 
 [[anytime_connections]]
 origin = "caltrain-sj_diridon"
