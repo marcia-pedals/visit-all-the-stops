@@ -85,7 +85,7 @@ duration_min = 10
 
 [[anytime_connections]]
 origin = "caltrain-sj_diridon"
-destination = "bart-BERY"
+destination = "bart-place_BERY"
 duration_min = 20
 
 # [[anytime_connections]]

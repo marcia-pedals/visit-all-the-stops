@@ -334,11 +334,18 @@ static Problem NaivePruneProblem(const Problem& problem) {
   {
     size_t new_stop_index = 0;
     for (size_t old_stop_index = 0; old_stop_index < problem.adjacency_list.edges.size(); ++old_stop_index) {
-      if (problem.adjacency_list.edges[old_stop_index].size() > 2) {
+      if (problem.adjacency_list.edges[old_stop_index].size() != 2) {
+        std::cout << "Keeping stop: " << problem.stop_index_to_id[old_stop_index] << "\n";
+        for (const size_t adj_i : problem.adjacency_list.edges[old_stop_index]) {
+          std::cout << "  Adjacent stop: " << problem.stop_index_to_id[adj_i] << "\n";
+        }
+
         // Keep the stop!
         old_to_new_stop_index[old_stop_index] = new_stop_index;
         new_to_old_stop_index[new_stop_index] = old_stop_index;
         ++new_stop_index;
+      } else {
+        std::cout << "Pruned stop: " << problem.stop_index_to_id[old_stop_index] << "\n";
       }
     }
   }
@@ -347,7 +354,7 @@ static Problem NaivePruneProblem(const Problem& problem) {
   pruned.stop_id_to_index.reserve(new_to_old_stop_index.size());
   pruned.stop_index_to_id.resize(new_to_old_stop_index.size());
   for (size_t new_stop_index = 0; new_stop_index < pruned.stop_index_to_id.size(); ++new_stop_index) {
-    size_t old_stop_index = new_to_old_stop_index[new_stop_index];
+    const size_t old_stop_index = new_to_old_stop_index[new_stop_index];
     pruned.stop_id_to_index[problem.stop_index_to_id[old_stop_index]] = new_stop_index;
     pruned.stop_index_to_id[new_stop_index] = problem.stop_index_to_id[old_stop_index];
   }
@@ -358,14 +365,46 @@ static Problem NaivePruneProblem(const Problem& problem) {
   // We're gonna do this by starting at each non-pruned "new" stop and looking for all the stuff it
   // connects to, allowing multiple hops through pruned stops.
   pruned.edges.resize(new_to_old_stop_index.size());
-  // pruned.anytime_connections.resize(new_to_old_stop_index.size());
   pruned.adjacency_list.edges.resize(new_to_old_stop_index.size());
+  for (size_t new_stop_index = 0; new_stop_index < pruned.stop_index_to_id.size(); ++new_stop_index) {
+    const size_t old_stop_index = new_to_old_stop_index[new_stop_index];
+    for (const Edge& edge : problem.edges[old_stop_index]) {
+      size_t old_origin_stop_index = old_stop_index;
+      size_t old_destination_stop_index = edge.destination_stop_index;
+      Schedule old_schedule = edge.schedule;
+      while (!old_to_new_stop_index.contains(old_destination_stop_index)) {
+        // Oh no, this edge goes into a pruned stop. EXTEND!!
+        const Edge* next_edge = nullptr;
+        for (const Edge& next_edge_candidate : problem.edges[old_destination_stop_index]) {
+          if (next_edge_candidate.destination_stop_index != old_origin_stop_index) {
+            next_edge = &next_edge_candidate;
+            break;
+          }
+        }
+        if (next_edge == nullptr) {
+          std::cout << "old stop: " << problem.stop_index_to_id[old_stop_index] << "\n";
+          std::cout << "old origin stop: " << problem.stop_index_to_id[old_origin_stop_index] << "\n";
+          std::cout << "old destination stop: " << problem.stop_index_to_id[old_destination_stop_index] << "\n";
 
-  // Okay, this is pretty much the same as the segment extension logic in SolverWalkVisitor, so I
-  // should factor that out. But in this case, it is important to support AnytimeConnections at the
-  // start, so first I need to add support for that, by changing AnytimeConnections to be handled
-  // more uniformly with Segments.
+          throw std::runtime_error("No next edge found. This should never happen.");
+        }
 
+        // TODO: Implement min_transfer_seconds here.
+        old_schedule = GetMinimalConnectingSchedule(old_schedule, next_edge->schedule, 0);
+        old_origin_stop_index = old_destination_stop_index;
+        old_destination_stop_index = next_edge->destination_stop_index;
+      }
+
+      // Okay we should have extended to a non-pruned stop, so we're ready to insert the edge!!
+      pruned.edges[new_stop_index].push_back({
+        .destination_stop_index = old_to_new_stop_index[old_destination_stop_index],
+        .schedule = old_schedule,
+      });
+      pruned.adjacency_list.edges[new_stop_index].push_back(old_to_new_stop_index[old_destination_stop_index]);
+    }
+  }
+
+  std::cout << "pruning done\n";
   return pruned;
 }
 
@@ -383,12 +422,14 @@ void Solve(
   Problem problem = BuildProblem(world);
   std::cout << "Built problem with " << problem.stop_index_to_id.size() << " stops.\n";
 
-  NaivePruneProblem(problem);
+  problem = NaivePruneProblem(problem);
   // return;
 
   std::bitset<32> target_stops;
   for (const std::string& stop_id : target_stop_ids) {
-    target_stops[problem.stop_id_to_index.at(stop_id)] = true;
+    if (problem.stop_id_to_index.contains(stop_id)) {
+      target_stops[problem.stop_id_to_index.at(stop_id)] = true;
+    }
   }
   if (target_stops.none()) {
     std::cout << "No target stops.\n";
