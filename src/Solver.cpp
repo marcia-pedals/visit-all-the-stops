@@ -11,7 +11,8 @@ struct Segment {
   WorldTime departure_time;
   WorldTime arrival_time;
 
-  size_t trip_index;
+  size_t departure_trip_index;
+  size_t arrival_trip_index;
 };
 
 struct GroupedSegments {
@@ -88,7 +89,8 @@ static Problem BuildProblem(const World& world) {
     segments->segments.push_back({
       .departure_time = world_segment.departure_time,
       .arrival_time = WorldTime(world_segment.departure_time.seconds + world_segment.duration.seconds),
-      .trip_index = GetOrAddTrip(world_segment.trip_id, problem),
+      .departure_trip_index = GetOrAddTrip(world_segment.trip_id, problem),
+      .arrival_trip_index = GetOrAddTrip(world_segment.trip_id, problem),
     });
   }
 
@@ -123,7 +125,7 @@ static std::vector<Segment> GetMinimalConnections(
   // because it's on a different/same trip_id.
   
   auto get_min_transfer_seconds = [&a, &b, min_transfer_seconds](size_t ai, size_t bi) -> unsigned int {
-    if (a[ai].trip_index == b[bi].trip_index) {
+    if (a[ai].arrival_trip_index == b[bi].departure_trip_index) {
       return 0;
     }
     return min_transfer_seconds;
@@ -145,7 +147,7 @@ static std::vector<Segment> GetMinimalConnections(
       (a_index == a.size() - 1) || 
       (a[a_index + 1].arrival_time.seconds + get_min_transfer_seconds(a_index + 1, b_index) > b[b_index].departure_time.seconds)
     ) {
-      result.push_back({a[a_index].departure_time, b[b_index].arrival_time, b[b_index].trip_index});
+      result.push_back({a[a_index].departure_time, b[b_index].arrival_time, a[a_index].departure_trip_index, b[b_index].arrival_trip_index});
     }
     ++a_index;
   }
@@ -228,7 +230,8 @@ struct SolverWalkVisitor {
         state.segments = prev_state.segments;
         for (Segment& segment : *state.segments) {
           segment.arrival_time = WorldTime(segment.arrival_time.seconds + anytime_connection->duration.seconds);
-          segment.trip_index = 0;
+          segment.departure_trip_index = 0;
+          segment.arrival_trip_index = 0;
         }
       } else {
         // We don't support anytime connections from the start. Prune.
@@ -362,8 +365,8 @@ void Solve(
             // TODO: Implement min_transfer_seconds here.
             if (segment.departure_time.seconds >= current_state.arrival_time.seconds) {
               current_state.departure_time = segment.departure_time;
-              current_state.departure_trip_index = segment.trip_index;
-              next_states.push_back({segment.arrival_time, segment.trip_index});
+              current_state.departure_trip_index = segment.departure_trip_index;
+              next_states.push_back({segment.arrival_time, segment.departure_trip_index});
               break;
             }
           }

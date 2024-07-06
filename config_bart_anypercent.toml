@@ -66,10 +66,10 @@ origin = "caltrain-place_MLBR"
 destination = "bart-place_MLBR"
 duration_min = 0
 
-# [[anytime_connections]]
-# origin = "caltrain-san_francisco"
-# destination = "bart-place_EMBR"
-# duration_min = 9
+[[anytime_connections]]
+origin = "caltrain-san_francisco"
+destination = "bart-place_EMBR"
+duration_min = 9
 
 [[anytime_connections]]
 origin = "caltrain-palo_alto"
