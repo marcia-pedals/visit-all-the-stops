@@ -15,14 +15,14 @@ struct Segment {
   size_t arrival_trip_index;
 };
 
-struct GroupedSegments {
-  size_t destination_stop_index;
+struct Schedule {
   std::vector<Segment> segments;
+  std::optional<WorldDuration> anytime_duration;
 };
 
-struct AnytimeConnection {
+struct Edge {
   size_t destination_stop_index;
-  WorldDuration duration;
+  Schedule schedule;
 };
 
 struct Problem {
@@ -32,13 +32,10 @@ struct Problem {
   absl::flat_hash_map<std::string, size_t> trip_id_to_index;
   std::vector<std::string> trip_index_to_id;
 
-  // segments[i] are all the segments originating from stop (index) i.
-  std::vector<std::vector<GroupedSegments>> segments;
+  // edges[i] are all the edges originating from stop (index) i.
+  std::vector<std::vector<Edge>> edges;
 
-  // anytime_connections[i] are all the anytime connections originating from stop (index) i.
-  std::vector<std::vector<AnytimeConnection>> anytime_connections;
-
-  // This is the projection of segments + anytime connections to just a graph on stops.
+  // This is the projection of `edges` to just a graph on stops.
   AdjacencyList adjacency_list;
 };
 
@@ -48,9 +45,8 @@ static size_t GetOrAddStop(const std::string& stop_id, Problem& problem) {
   }
   problem.stop_id_to_index[stop_id] = problem.stop_index_to_id.size();
   problem.stop_index_to_id.push_back(stop_id);
-  problem.segments.push_back({});
+  problem.edges.push_back({});
   problem.adjacency_list.edges.push_back({});
-  problem.anytime_connections.push_back({});
   return problem.stop_index_to_id.size() - 1;
 }
 
@@ -63,6 +59,21 @@ static size_t GetOrAddTrip(const std::string& trip_id, Problem& problem) {
   return problem.trip_index_to_id.size() - 1;
 }
 
+static Edge* GetOrAddEdge(
+  size_t origin_stop_index,
+  size_t destination_stop_index,
+  Problem& problem
+) {
+  for (Edge& edge : problem.edges[origin_stop_index]) {
+    if (edge.destination_stop_index == destination_stop_index) {
+      return &edge;
+    }
+  }
+  problem.edges[origin_stop_index].push_back({destination_stop_index, {}});
+  problem.adjacency_list.edges[origin_stop_index].push_back(destination_stop_index);
+  return &problem.edges[origin_stop_index].back();
+}
+
 static Problem BuildProblem(const World& world) {
   Problem problem;
 
@@ -72,21 +83,8 @@ static Problem BuildProblem(const World& world) {
   for (const auto& world_segment : world.segments) {
     size_t origin_stop_index = GetOrAddStop(world_segment.origin_stop_id, problem);
     size_t destination_stop_index = GetOrAddStop(world_segment.destination_stop_id, problem);
-
-    GroupedSegments* segments = nullptr;
-    for (GroupedSegments& candidate : problem.segments[origin_stop_index]) {
-      if (candidate.destination_stop_index == destination_stop_index) {
-        segments = &candidate;
-        break;
-      }
-    }
-    if (segments == nullptr) {
-      problem.segments[origin_stop_index].push_back({destination_stop_index, {}});
-      segments = &problem.segments[origin_stop_index].back();
-      problem.adjacency_list.edges[origin_stop_index].push_back(destination_stop_index);
-    }
-
-    segments->segments.push_back({
+    Edge* edge = GetOrAddEdge(origin_stop_index, destination_stop_index, problem);
+    edge->schedule.segments.push_back({
       .departure_time = world_segment.departure_time,
       .arrival_time = WorldTime(world_segment.departure_time.seconds + world_segment.duration.seconds),
       .departure_trip_index = GetOrAddTrip(world_segment.trip_id, problem),
@@ -97,23 +95,14 @@ static Problem BuildProblem(const World& world) {
   for (const auto& anytime_connection : world.anytime_connections) {
     size_t origin_stop_index = GetOrAddStop(anytime_connection.origin_stop_id, problem);
     size_t destination_stop_index = GetOrAddStop(anytime_connection.destination_stop_id, problem);
-
-    problem.anytime_connections[origin_stop_index].push_back({
-      .destination_stop_index = destination_stop_index,
-      .duration = anytime_connection.duration,
-    });
-
-    std::vector<size_t>& adj_list_edges = problem.adjacency_list.edges[origin_stop_index];
-    if (std::count(adj_list_edges.begin(), adj_list_edges.end(), destination_stop_index) > 0) {
-      throw std::runtime_error("Can't (yet) handle anytime connections that are also segments.");
-    }
-    adj_list_edges.push_back(destination_stop_index);
+    Edge* edge = GetOrAddEdge(origin_stop_index, destination_stop_index, problem);
+    edge->schedule.anytime_duration = anytime_connection.duration;
   }
 
   return problem;
 }
 
-static std::vector<Segment> GetMinimalConnections(
+static std::vector<Segment> GetMinimalConnectingSegments(
   const std::vector<Segment>& a,
   const std::vector<Segment>& b,
   const unsigned int min_transfer_seconds
@@ -155,42 +144,64 @@ static std::vector<Segment> GetMinimalConnections(
   return result;
 }
 
+static Schedule GetMinimalConnectingSchedule(
+  const Schedule& a,
+  const Schedule& b,
+  const unsigned int min_transfer_seconds
+) {
+  if ((!a.segments.empty() && a.anytime_duration.has_value()) || (!b.segments.empty() && b.anytime_duration.has_value())) {
+    throw std::runtime_error("Cannot deal with schedules that have segments and anytime connections.");
+  }
+  if (a.anytime_duration.has_value() && b.anytime_duration.has_value()) {
+    return {
+      .segments = {},
+      .anytime_duration = WorldDuration(a.anytime_duration->seconds + b.anytime_duration->seconds),
+    };
+  }
+  if (a.anytime_duration.has_value()) {
+    Schedule result;
+    result.segments = b.segments;
+    for (Segment& segment : result.segments) {
+      segment.departure_time = WorldTime(segment.departure_time.seconds - a.anytime_duration->seconds);
+      segment.departure_trip_index = 0;
+    }
+    return result;
+  }
+  if (b.anytime_duration.has_value()) {
+    Schedule result;
+    result.segments = a.segments;
+    for (Segment& segment : result.segments) {
+      segment.arrival_time = WorldTime(segment.arrival_time.seconds + b.anytime_duration->seconds);
+      segment.arrival_trip_index = 0;
+    }
+    return result;
+  }
+  Schedule result;
+  result.segments = GetMinimalConnectingSegments(a.segments, b.segments, min_transfer_seconds);
+  return result;
+}
+
 struct BestWalk {
   std::vector<size_t> walk;
   std::vector<WorldTime> start_times;
 };
 
 struct SolverWalkVisitorState {
+  // The stop we are currently at.
   size_t stop_index;
 
-  // When this has no value, it means that you can take any segment out of this stop. This can
-  // happen on the start, and can also happen if we take anytime connection(s) from the start.
-  // Though we currently don't allow taking anytime connection(s) from the start -- we'd need to
-  // keep track of their duration somewhere to support that.
-  std::optional<std::vector<Segment>> segments;
+  // The "schedule" from the starting stop to the current stop.
+  Schedule schedule;
 };
 
-static const std::vector<Segment>* GetSegments(
+static const Schedule* GetSchedule(
   const Problem& problem,
   size_t origin_stop_index,
   size_t destination_stop_index
 ) {
-  for (const GroupedSegments& edge : problem.segments[origin_stop_index]) {
+  for (const Edge& edge : problem.edges[origin_stop_index]) {
     if (edge.destination_stop_index == destination_stop_index) {
-      return &edge.segments;
-    }
-  }
-  return nullptr;
-}
-
-static const AnytimeConnection* GetAnytimeConnection(
-  const Problem& problem,
-  size_t origin_stop_index,
-  size_t destination_stop_index
-) {
-  for (const AnytimeConnection& connection : problem.anytime_connections[origin_stop_index]) {
-    if (connection.destination_stop_index == destination_stop_index) {
-      return &connection;
+      return &edge.schedule;
     }
   }
   return nullptr;
@@ -207,61 +218,40 @@ struct SolverWalkVisitor {
   // If this returns false, this branch of the DFS is pruned.
   // The DFS will always pop the stop, even if this returns false.
   bool PushStop(size_t stop_index) {
-    stack.push_back({stop_index, std::nullopt});
+
+    // Push a state with the curent stop, and a "dummy" schedule.
+    // We will fill in this schedule appropriately and return.
+    stack.push_back({stop_index, {}});
     SolverWalkVisitorState& state = stack.back();
 
     if (stack.size() == 1) {
-      state.segments = std::nullopt;
+      // This is the first stop, so we can get to it "anytime", and it takes 0 minutes.
+      state.schedule.anytime_duration = WorldDuration(0);
       return true;
     }
 
     const SolverWalkVisitorState& prev_state = stack[stack.size() - 2];
-    const std::vector<Segment>* prev_to_cur_segments = GetSegments(problem, prev_state.stop_index, stop_index);
-    if (prev_to_cur_segments == nullptr) {
-      const AnytimeConnection* anytime_connection = GetAnytimeConnection(problem, prev_state.stop_index, stop_index);
-      if (anytime_connection == nullptr) {
-        // There are no segments or anytime connections, so prune.
-        state.segments = {};
-        return false;
-      }
-
-      // Handle the anytime connection!
-      if (prev_state.segments.has_value()) {
-        state.segments = prev_state.segments;
-        for (Segment& segment : *state.segments) {
-          segment.arrival_time = WorldTime(segment.arrival_time.seconds + anytime_connection->duration.seconds);
-          segment.departure_trip_index = 0;
-          segment.arrival_trip_index = 0;
-        }
-      } else {
-        // We don't support anytime connections from the start. Prune.
-        state.segments = {};
-        return false;
-      }
-    } else {
-      // Handle the segments!
-      if (prev_state.segments.has_value()) {
-        // TODO: Make this configurable.
-        const unsigned int min_transfer_seconds = (
-          problem.stop_id_to_index.at("bart-place_COLS") == prev_state.stop_index ? 1 * 60 : 0 * 60
-        );
-        state.segments = GetMinimalConnections(
-          prev_state.segments.value(),
-          *prev_to_cur_segments,
-          min_transfer_seconds
-        );
-      } else {
-        state.segments = *prev_to_cur_segments;
-      }
+    const Schedule* schedule = GetSchedule(problem, prev_state.stop_index, stop_index);
+    if (schedule == nullptr) {
+      // There is no schedule between these stops, so prune.
+      return false;
     }
 
+    const unsigned int min_transfer_seconds = (
+      problem.stop_id_to_index.at("bart-place_COLS") == prev_state.stop_index ? 1 * 60 : 0 * 60
+    );
+    state.schedule = GetMinimalConnectingSchedule(prev_state.schedule, *schedule, min_transfer_seconds);
+
     const unsigned int captured_best_duration = best_duration;
-    std::erase_if(*state.segments, [captured_best_duration](const Segment& segment) {
+    std::erase_if(state.schedule.segments, [captured_best_duration](const Segment& segment) {
       return segment.arrival_time.seconds - segment.departure_time.seconds > captured_best_duration;
     });
+    if (state.schedule.anytime_duration.has_value() && state.schedule.anytime_duration->seconds > best_duration) {
+      state.schedule.anytime_duration = std::nullopt;
+    }
 
-    // Prune iff we have no segments left.
-    return !state.segments->empty();
+    // Prune iff the schedule has become empty.
+    return !(state.schedule.segments.empty() && !state.schedule.anytime_duration.has_value());
   }
 
   void PopStop() {
@@ -269,14 +259,14 @@ struct SolverWalkVisitor {
   }
 
   void WalkDone() {
-    if (stack.size() == 0 || !stack.back().segments.has_value()) {
+    if (stack.size() == 0) {
       // TODO: Actually in this case, the empty walk or the anytime-only walk is probably actually a
       // solution and we should account for it.
       return;
     }
 
     bool pushed_this_walk = false;
-    for (const Segment& segment : *stack.back().segments) {
+    for (const Segment& segment : stack.back().schedule.segments) {
       const unsigned int duration = segment.arrival_time.seconds - segment.departure_time.seconds;
       if (duration < best_duration) {
         std::cout << absl::StrCat("improved duration: ", WorldDuration(duration), "\n");
@@ -317,13 +307,13 @@ static void AssertSymmetric(const AdjacencyList& adjacency_list) {
   }
 }
 
-static GroupedSegments CombineSegments(
+static Edge CombineSegments(
   const Problem& problem,
   const size_t a,
   const size_t b,
   const size_t c
 ) {
-  GroupedSegments result;
+  Edge result;
   return result;
 }
 
@@ -367,8 +357,8 @@ static Problem NaivePruneProblem(const Problem& problem) {
   // the whole pruned sections to construct the new stuff.
   // We're gonna do this by starting at each non-pruned "new" stop and looking for all the stuff it
   // connects to, allowing multiple hops through pruned stops.
-  pruned.segments.resize(new_to_old_stop_index.size());
-  pruned.anytime_connections.resize(new_to_old_stop_index.size());
+  pruned.edges.resize(new_to_old_stop_index.size());
+  // pruned.anytime_connections.resize(new_to_old_stop_index.size());
   pruned.adjacency_list.edges.resize(new_to_old_stop_index.size());
 
   // Okay, this is pretty much the same as the segment extension logic in SolverWalkVisitor, so I
@@ -433,19 +423,16 @@ void Solve(
     for (size_t i = 1; i < best_walk.walk.size(); ++i) {
       const size_t current_stop_index = best_walk.walk[i - 1];
       const size_t next_stop_index = best_walk.walk[i];
-      const std::vector<Segment>* next_segments = nullptr;
-      for (const GroupedSegments& edge : problem.segments[current_stop_index]) {
-        if (edge.destination_stop_index == next_stop_index) {
-          next_segments = &edge.segments;
-          break;
-        }
+      const Schedule* next_schedule = GetSchedule(problem, current_stop_index, next_stop_index);
+      if (next_schedule == nullptr) {
+        throw std::runtime_error("No schedule found. This should never happen.");
       }
-      if (next_segments != nullptr) {
+      if (!next_schedule->segments.empty()) {
         walk_states.push_back({});
         std::vector<PrettyPrintWalkState>& current_states = walk_states[walk_states.size() - 2];
         std::vector<PrettyPrintWalkState>& next_states = walk_states.back();
         for (PrettyPrintWalkState& current_state : current_states) {
-          for (const Segment& segment : *next_segments) {
+          for (const Segment& segment : next_schedule->segments) {
             // TODO: Implement min_transfer_seconds here.
             if (segment.departure_time.seconds >= current_state.arrival_time.seconds) {
               current_state.departure_time = segment.departure_time;
@@ -457,15 +444,7 @@ void Solve(
         }
         continue;
       }
-
-      const AnytimeConnection* anytime_connection = nullptr;
-      for (const AnytimeConnection& connection : problem.anytime_connections[current_stop_index]) {
-        if (connection.destination_stop_index == next_stop_index) {
-          anytime_connection = &connection;
-          break;
-        }
-      }
-      if (anytime_connection != nullptr) {
+      if (next_schedule->anytime_duration.has_value()) {
         walk_states.push_back({});
         std::vector<PrettyPrintWalkState>& current_states = walk_states[walk_states.size() - 2];
         std::vector<PrettyPrintWalkState>& next_states = walk_states.back();
@@ -473,14 +452,13 @@ void Solve(
           current_state.departure_time = current_state.arrival_time;
           current_state.departure_trip_index = 0;
           next_states.push_back({
-            WorldTime(current_state.departure_time->seconds + anytime_connection->duration.seconds),
+            WorldTime(current_state.departure_time->seconds + next_schedule->anytime_duration->seconds),
             std::nullopt
           });
         }
         continue;
       }
-
-      throw std::runtime_error("No edge found. This should never happen.");
+      throw std::runtime_error("No segments or anytime duration. This should never happen.");
     }
 
     auto optTimeFormatter = [](std::string *out, const std::optional<WorldTime>& time) {
