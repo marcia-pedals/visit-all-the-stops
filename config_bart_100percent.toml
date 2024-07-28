@@ -1,4 +1,4 @@
-date = "2024-06-10"
+date = "2024-08-31"
 target_stop_ids = [
   "bart-place_LAKE",
   "bart-place_BERY",
@@ -17,7 +17,7 @@ target_stop_ids = [
 ]
 
 [[gtfs]]
-dir = "data/fetched-2024-06-08/bart"
+dir = "data/fetched-2024-07-20/bart"
 prefix = "bart-"
 segment_stop_ids = [
   "bart-place_LAKE",

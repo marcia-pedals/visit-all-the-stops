@@ -1,4 +1,4 @@
-date = "2024-06-12"
+date = "2024-08-31"
 target_stop_ids = [
   "bart-place_LAKE",
   "bart-place_BERY",
@@ -15,6 +15,7 @@ target_stop_ids = [
   "bart-place_BALB",
   "bart-place_MLBR",
   "bart-place_WCRK",
+  "bart-place_EMBR",
 ]
 
 [[gtfs]]
@@ -29,7 +30,7 @@ segment_stop_ids = [
 ]
 
 [[gtfs]]
-dir = "data/fetched-2024-06-08/bart"
+dir = "data/fetched-2024-07-20/bart"
 prefix = "bart-"
 segment_stop_ids = [
   "bart-place_LAKE",
@@ -53,13 +54,13 @@ segment_stop_ids = [
   "bart-place_EMBR",
 ]
 
-# [[gtfs]]
-# dir = "data/scratch/SJJPA_GTFS"
-# prefix = "sjj-"
-# segment_stop_ids = [
-#   "sjj-ACA",
-#   "sjj-RIC",
-# ]
+[[gtfs]]
+dir = "data/scratch/SJJPA_GTFS"
+prefix = "sjj-"
+segment_stop_ids = [
+  "sjj-ACA",
+  "sjj-RIC",
+]
 
 [[anytime_connections]]
 origin = "caltrain-place_MLBR"
@@ -69,12 +70,12 @@ duration_min = 0
 [[anytime_connections]]
 origin = "caltrain-san_francisco"
 destination = "bart-place_EMBR"
-duration_min = 9
+duration_min = 8
 
-[[anytime_connections]]
-origin = "caltrain-palo_alto"
-destination = "bart-place_UCTY"
-duration_min = 10
+# [[anytime_connections]]
+# origin = "caltrain-palo_alto"
+# destination = "bart-place_UCTY"
+# duration_min = 10
 
 
 # [[anytime_connections]]
@@ -86,17 +87,17 @@ duration_min = 10
 [[anytime_connections]]
 origin = "caltrain-sj_diridon"
 destination = "bart-place_BERY"
+duration_min = 10
+
+[[anytime_connections]]
+origin = "sjj-ACA"
+destination = "bart-place_ANTC"
 duration_min = 20
 
-# [[anytime_connections]]
-# origin = "sjj-ACA"
-# destination = "bart-place_ANTC"
-# duration_min = 5
-
-# [[anytime_connections]]
-# origin = "sjj-RIC"
-# destination = "bart-place_RICH"
-# duration_min = 0
+[[anytime_connections]]
+origin = "sjj-RIC"
+destination = "bart-place_RICH"
+duration_min = 1
 
 # # fake ACE
 # [[anytime_connections]]

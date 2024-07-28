@@ -238,7 +238,8 @@ struct SolverWalkVisitor {
     }
 
     const unsigned int min_transfer_seconds = (
-      problem.stop_id_to_index.at("bart-place_COLS") == prev_state.stop_index ? 1 * 60 : 0 * 60
+      (problem.stop_id_to_index.at("bart-place_COLS") == prev_state.stop_index ||
+       problem.stop_id_to_index.at("bart-place_RICH") == prev_state.stop_index) ? 1 * 60 : 0 * 60
     );
     state.schedule = GetMinimalConnectingSchedule(prev_state.schedule, *schedule, min_transfer_seconds);
 
@@ -422,7 +423,7 @@ void Solve(
   Problem problem = BuildProblem(world);
   std::cout << "Built problem with " << problem.stop_index_to_id.size() << " stops.\n";
 
-  problem = NaivePruneProblem(problem);
+  // problem = NaivePruneProblem(problem);
   // return;
 
   std::bitset<32> target_stops;
