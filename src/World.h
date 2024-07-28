@@ -47,6 +47,8 @@ struct WorldRoute {
 struct WorldStop {
   std::string name;
   std::optional<std::string> parent_station_id;
+  std::string lat;
+  std::string lon;
 };
 
 struct WorldSegment {

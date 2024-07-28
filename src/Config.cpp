@@ -8,7 +8,6 @@
 std::optional<std::string> readConfig(
   absl::string_view config_file, const ReadConfigOptions& options, Config& config
 ) {
-  std::cout << "Reading config: " << config_file << "\n";
   toml::table config_table;
   try {
     config_table = toml::parse_file(config_file);

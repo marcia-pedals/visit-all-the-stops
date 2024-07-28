@@ -1,0 +1,88 @@
+{
+  "vertices": [
+    {
+      "id": "bart-place_BAYF",
+      "lat": "37.696908",
+      "lon": "-122.126446",
+      "name": "Bay Fair"
+    },
+    {
+      "id": "bart-place_COLS",
+      "lat": "37.753576",
+      "lon": "-122.196716",
+      "name": "Coliseum"
+    },
+    {
+      "id": "bart-place_RICH",
+      "lat": "37.936758",
+      "lon": "-122.353047",
+      "name": "Richmond"
+    },
+    {
+      "id": "bart-place_MCAR",
+      "lat": "37.828803",
+      "lon": "-122.267105",
+      "name": "MacArthur"
+    },
+    {
+      "id": "bart-place_BALB",
+      "lat": "37.721747",
+      "lon": "-122.447457",
+      "name": "Balboa Park"
+    },
+    {
+      "id": "bart-place_WOAK",
+      "lat": "37.804888",
+      "lon": "-122.295151",
+      "name": "West Oakland"
+    },
+    {
+      "id": "bart-place_BERY",
+      "lat": "37.368473",
+      "lon": "-121.874681",
+      "name": "Berryessa / North San Jose"
+    },
+    {
+      "id": "bart-place_LAKE",
+      "lat": "37.797322",
+      "lon": "-122.265247",
+      "name": "Lake Merritt"
+    },
+    {
+      "id": "bart-place_DUBL",
+      "lat": "37.701646",
+      "lon": "-121.899229",
+      "name": "Dublin / Pleasanton"
+    },
+    {
+      "id": "bart-place_ANTC",
+      "lat": "37.995373",
+      "lon": "-121.780346",
+      "name": "Antioch"
+    },
+    {
+      "id": "bart-OAKL",
+      "lat": "37.713256",
+      "lon": "-122.212237",
+      "name": "Oakland International Airport Station"
+    },
+    {
+      "id": "bart-place_19TH",
+      "lat": "37.808078",
+      "lon": "-122.268758",
+      "name": "19th Street Oakland"
+    },
+    {
+      "id": "bart-place_MLBR",
+      "lat": "37.600237",
+      "lon": "-122.386757",
+      "name": "Millbrae"
+    },
+    {
+      "id": "bart-place_12TH",
+      "lat": "37.803482",
+      "lon": "-122.271630",
+      "name": "12th Street / Oakland City Center"
+    }
+  ]
+}

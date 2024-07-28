@@ -131,8 +131,10 @@ std::optional<std::string> readGTFSToWorld(
     std::string stop_id = id_prefix + row["stop_id"].get<>();
     std::string stop_name = row["stop_name"].get<>();
     std::string parent_station_raw = row["parent_station"].get<>();
+    std::string lat = row["stop_lat"].get<>();
+    std::string lon = row["stop_lon"].get<>();
     std::optional<std::string> parent_station = parent_station_raw.empty() ? std::nullopt : std::make_optional(id_prefix + parent_station_raw);
-    world.stops[stop_id] = WorldStop{stop_name, parent_station};
+    world.stops[stop_id] = WorldStop{stop_name, parent_station, lat, lon};
   }
 
   // Validate segment_stop_ids.

@@ -8,6 +8,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Enable GTest integration for RapidCheck
 set(RC_ENABLE_GTEST ON CACHE BOOL "Enable GTest integration for RapidCheck")
 
+# Typically you don't care so much for a third party library's tests to be
+# run from your own project's code.
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+
 add_subdirectory(third_party/rapidcheck)
 include_directories(third_party/rapidcheck/include)
 include_directories(third_party/rapidcheck/extras/gtest/include)
@@ -23,6 +27,8 @@ include_directories(third_party/googletest/googlemock/include)
 include_directories(third_party/googletest/googletest/include)
 
 include_directories(third_party/tomlplusplus/include)
+
+include_directories(third_party/json/single_include)
 
 # MultiSegment
 add_library(MultiSegment src/MultiSegment.cpp)
@@ -51,6 +57,9 @@ target_link_libraries(list_stops Config World absl::flags absl::flags_parse)
 add_executable(main src/main.cpp)
 target_link_libraries(main Config MultiSegment World Solver absl::flags absl::flags_parse)
 
+# dump_problem_graph
+add_executable(dump_problem_graph src/dump_problem_graph.cpp)
+target_link_libraries(dump_problem_graph Config MultiSegment World Solver absl::flags absl::flags_parse)
 
 # Enable testing
 enable_testing()
