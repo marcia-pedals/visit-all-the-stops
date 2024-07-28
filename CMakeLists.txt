@@ -31,9 +31,13 @@ add_library(MultiSegment src/MultiSegment.cpp)
 add_library(World src/World.cpp)
 target_link_libraries(World MultiSegment absl::strings absl::str_format absl::time csv)
 
+# Problem
+add_library(Problem src/Problem.cpp)
+target_link_libraries(Problem World absl::flat_hash_map absl::strings)
+
 # Solver
 add_library(Solver src/Solver.cpp)
-target_link_libraries(Solver World absl::flat_hash_map absl::strings)
+target_link_libraries(Solver World Problem absl::flat_hash_map absl::strings)
 
 # Config
 add_library(Config src/Config.cpp)
