@@ -200,6 +200,71 @@ TEST(
   EXPECT_EQ(prettyDepartureTable, expected);
 }
 
+TEST(
+  WorldTest,
+  bartSFIADuplicateStopTimeDropped
+) {
+  World world;
+  const auto err_opt = readGTFSToWorld(
+    "data/fetched-2024-06-08/bart",
+    "bart-",
+    absl::CivilDay(2024, 6, 7),
+    nullptr,
+    world
+  );
+  ASSERT_EQ(err_opt, std::nullopt);
+
+  EXPECT_EQ(
+    world.trips["bart-1508826"].stop_times[0],
+    (WorldTripStopTimes{
+      .stop_id = "bart-place_MLBR",
+      .arrival_time = WorldTime(6 * 3600 + 13 * 60),
+      .departure_time = WorldTime(6 * 3600 + 13 * 60)
+    })
+  );
+  EXPECT_EQ(
+    world.trips["bart-1508826"].stop_times[1],
+    (WorldTripStopTimes{
+      .stop_id = "bart-place_SFIA",
+      .arrival_time = WorldTime(6 * 3600 + 17 * 60),
+      .departure_time = WorldTime(6 * 3600 + 19 * 60)
+    })
+  );
+  EXPECT_EQ(
+    world.trips["bart-1508826"].stop_times[2],
+    (WorldTripStopTimes{
+      .stop_id = "bart-place_SBRN",
+      .arrival_time = WorldTime(6 * 3600 + 23 * 60),
+      .departure_time = WorldTime(6 * 3600 + 23 * 60)
+    })
+  );
+
+  EXPECT_EQ(
+    world.trips["bart-1508916"].stop_times[21],
+    (WorldTripStopTimes{
+      .stop_id = "bart-place_SBRN",
+      .arrival_time = WorldTime(6 * 3600 + 38 * 60),
+      .departure_time = WorldTime(6 * 3600 + 39 * 60)
+    })
+  );
+  EXPECT_EQ(
+    world.trips["bart-1508916"].stop_times[22],
+    (WorldTripStopTimes{
+      .stop_id = "bart-place_SFIA",
+      .arrival_time = WorldTime(6 * 3600 + 43 * 60),
+      .departure_time = WorldTime(6 * 3600 + 46 * 60)
+    })
+  );
+  EXPECT_EQ(
+    world.trips["bart-1508916"].stop_times[23],
+    (WorldTripStopTimes{
+      .stop_id = "bart-place_MLBR",
+      .arrival_time = WorldTime(6 * 3600 + 50 * 60),
+      .departure_time = WorldTime(6 * 3600 + 50 * 60)
+    })
+  );
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

@@ -41,6 +41,10 @@ target_link_libraries(World MultiSegment absl::strings absl::str_format absl::ti
 add_library(Problem src/Problem.cpp)
 target_link_libraries(Problem World absl::flat_hash_map absl::strings)
 
+# Simplifier
+add_library(Simplifier src/Simplifier.cpp)
+target_link_libraries(Simplifier Problem)
+
 # Solver
 add_library(Solver src/Solver.cpp)
 target_link_libraries(Solver World Problem absl::flat_hash_map absl::strings)
@@ -55,7 +59,7 @@ target_link_libraries(list_stops Config World absl::flags absl::flags_parse)
 
 # main
 add_executable(main src/main.cpp)
-target_link_libraries(main Config MultiSegment World Solver absl::flags absl::flags_parse)
+target_link_libraries(main Config MultiSegment World Solver Simplifier absl::flags absl::flags_parse)
 
 # dump_problem_graph
 add_executable(dump_problem_graph src/dump_problem_graph.cpp)

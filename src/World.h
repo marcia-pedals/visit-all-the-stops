@@ -14,12 +14,17 @@ struct WorldTime {
   // Seconds since beginning of service day.
   unsigned int seconds;
 
+  WorldTime() : seconds(0) {}
   WorldTime(unsigned int seconds) : seconds(seconds) {}
 
   template <typename Sink>
   friend void AbslStringify(Sink& sink, const WorldTime& time) {
     // Note: Drops seconds.
     absl::Format(&sink, "%02u:%02u", time.seconds / 3600, (time.seconds / 60) % 60);
+  }
+
+  bool operator==(const WorldTime& other) const {
+    return seconds == other.seconds;
   }
 };
 
@@ -65,6 +70,10 @@ struct WorldTripStopTimes {
   std::string stop_id;
   std::optional<WorldTime> arrival_time;
   std::optional<WorldTime> departure_time;
+
+  bool operator==(const WorldTripStopTimes& other) const {
+    return stop_id == other.stop_id && arrival_time == other.arrival_time && departure_time == other.departure_time;
+  }
 };
 
 struct WorldTrip {

@@ -1,5 +1,6 @@
 #include "World.h"
 
+#include <algorithm>
 #include <sstream>
 #include <variant>
 
@@ -222,6 +223,23 @@ std::optional<std::string> readGTFSToWorld(
     if (!sorted) {
       return "Trip " + entry.first + " has wacky stop times.";
     }
+  }
+
+  // Eliminate consecutive duplicate stops because I don't like them.
+  for (auto& entry : world.trips) {
+    auto& trip = entry.second;
+    for (size_t i = 1; i < trip.stop_times.size(); ++i) {
+      auto& prev = trip.stop_times[i - 1];
+      auto& cur = trip.stop_times[i];
+      if (prev.stop_id == cur.stop_id) {
+        prev.stop_id = "ERASE ME";
+        cur.arrival_time = prev.arrival_time;
+      }
+    }
+    std::erase_if(
+      trip.stop_times,
+      [](const WorldTripStopTimes& x) { return x.stop_id == "ERASE ME"; }
+    );
   }
 
   // Segment the trips.
