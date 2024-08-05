@@ -37,14 +37,36 @@ int main(int argc, char* argv[]) {
 
   nlohmann::json& result_vertices = result["vertices"];
   for (const std::string& stop_id : problem.stop_index_to_id) {
-    result_vertices.push_back({});
-    nlohmann::json& vertex = result_vertices.back();
-    vertex["id"] = stop_id;
+    nlohmann::json& vertex = result_vertices[stop_id];
     const WorldStop& stop = config.world.stops.at(stop_id);
     vertex["lat"] = stop.lat;
     vertex["lon"] = stop.lon;
     vertex["name"] = stop.name;
   }
+
+  nlohmann::json& result_edges = result["edges"];
+  for (size_t origin_stop_index = 0; origin_stop_index < problem.edges.size(); ++origin_stop_index) {
+    const std::string& origin_stop_id = problem.stop_index_to_id[origin_stop_index];
+    for (const Edge& edge : problem.edges[origin_stop_index]) {
+      const size_t destination_stop_index = edge.destination_stop_index;
+      const std::string& destination_stop_id = problem.stop_index_to_id[destination_stop_index];
+  
+      result_edges.push_back({});
+      nlohmann::json& result_edge = result_edges.back();
+      result_edge["origin_id"] = origin_stop_id;
+      result_edge["destination_id"] = destination_stop_id;
+
+      nlohmann::json& result_segments = result_edge["segments"];
+      for (const Segment& seg : edge.schedule.segments) {
+        result_segments.push_back({});
+        nlohmann::json& result_segment = result_segments.back();
+        result_segment["departure_time"] = absl::StrCat(seg.departure_time);
+        result_segment["arrival_time"] = absl::StrCat(seg.arrival_time);
+        // TODO: Could include some trip identifier(s).
+      }
+    }
+  }
+
 
   std::cout << result.dump(2) << "\n";
 
