@@ -56,11 +56,25 @@ void AddSegmentsFromDeparture(
       if (visited.find(edge.destination_stop_index) != visited.end()) {
         continue;
       }
-      if (edge.schedule.anytime_duration.has_value()) {
-        throw std::runtime_error("TODO: handle anytime connections");
+      if (edge.schedule.anytime_duration.has_value() && edge.schedule.segments.size() > 0) {
+        throw std::runtime_error("can't have both kinds of connections at the same time");
       }
-      // TODO: Could probably sort things in such a way that I can do some kind of binary search instead of looking at all of them.
+
       std::optional<TimeLoc> best_arrival;
+
+      if (edge.schedule.anytime_duration.has_value()) {
+        best_arrival = TimeLoc{
+          .time = WorldTime(cur.time.seconds + edge.schedule.anytime_duration->seconds),
+          .stop_index = edge.destination_stop_index,
+          .breadcrumb = Breadcrumb{
+            .previous_stop_index = cur.stop_index,
+            .departure_time = cur.time,
+            .trip_index = 0
+          }
+        };
+      }
+
+      // TODO: Could probably sort things in such a way that I can do some kind of binary search instead of looking at all of them.
       for (const Segment& segment : edge.schedule.segments) {
         // TODO: Handle min connection times.
         if (segment.departure_time.seconds < cur.time.seconds) {
@@ -84,7 +98,57 @@ void AddSegmentsFromDeparture(
     }
   }
 
-  // for (const size_t final_stop_index : keep_stop_indexes)
+  // std::cout << "  Dijkstra done.\n";
+
+  const size_t new_problem_start_stop_index = GetOrAddStop(
+    original.stop_index_to_id[start.stop_index], new_problem
+  );
+
+  for (const size_t final_stop_index : keep_stop_indexes) {
+    if (final_stop_index == start.stop_index || visited.find(final_stop_index) == visited.end()) {
+      continue;
+    }
+
+    TimeLoc cur = visited[final_stop_index];
+    TimeLoc latest_at_keep = cur;
+    // std::cout << "  Backtracking from " << original.stop_index_to_id[final_stop_index] << " to " << original.stop_index_to_id[start.stop_index] << "\n";
+    while (cur.breadcrumb->previous_stop_index != start.stop_index) {
+      // if (cur.stop_index != 0) {
+      //   std::cout << "  " << original.stop_index_to_id[cur.stop_index] << "\n";
+      // }
+      cur = visited[cur.breadcrumb->previous_stop_index];
+      if (keep_stop_indexes.find(cur.stop_index) != keep_stop_indexes.end()) {
+        latest_at_keep = cur;
+      }
+    }
+    // std::cout << "  Backtracking done.\n";
+
+    Segment new_segment{
+      .departure_time = cur.breadcrumb->departure_time,
+      .arrival_time = latest_at_keep.time,
+      .departure_trip_index = GetOrAddTrip(
+        original.trip_index_to_id[cur.breadcrumb->trip_index],
+        new_problem
+      ),
+      .arrival_trip_index = GetOrAddTrip(
+        original.trip_index_to_id[latest_at_keep.breadcrumb->trip_index],
+        new_problem
+      )
+    };
+
+    const size_t new_problem_dest_stop_index = GetOrAddStop(
+      original.stop_index_to_id[latest_at_keep.stop_index], new_problem
+    );
+    Edge* new_problem_edge = GetOrAddEdge(
+      new_problem_start_stop_index,
+      new_problem_dest_stop_index,
+      new_problem
+    );
+    auto& segments = new_problem_edge->schedule.segments;
+    if (std::find(segments.begin(), segments.end(), new_segment) == segments.end()) {
+      segments.push_back(new_segment);
+    }
+  }
 
   // for (const auto& [stop_index, time_loc] : visited) {
   //   std::cout << original.stop_index_to_id[stop_index] << " " << absl::StrCat(time_loc.time) << "\n";
@@ -94,42 +158,42 @@ void AddSegmentsFromDeparture(
   // }
 }
 
-
-void AddSegmentsFromStop(
-  const Problem& original,
-  size_t start_stop_index,
-  const std::unordered_set<size_t>& keep_stop_indexes,
-  Problem& new_problem
-) {
-}
-
 };  // namespace
 
 Problem SimplifyProblem(const Problem& problem, const std::vector<std::string>& keep_stop_ids) {
-  Problem new_problem;
-  // for (const std::string& stop_id : keep_stop_ids) {
-    // AddSegmentsFromStop(problem, stop_id, keep_stop_ids, new_problem);
-  // }
-
-  std::unordered_set<size_t> keep_stop_indexes;
-  for (const std::string& stop_id : keep_stop_ids) {
-    keep_stop_indexes.insert(problem.stop_id_to_index.at(stop_id));
-  }
-
-  TimeLoc start{
-    .time = WorldTime(10 * 3600),
-    .stop_index = problem.stop_id_to_index.at("bart-place_BERY"),
-    .breadcrumb = std::nullopt
-  };
-
-  AddSegmentsFromDeparture(problem, start, keep_stop_indexes, new_problem);
-
   // For each keep_stop_id.
   // For each departure time.
   // Dijkstra, terminating as soon as we have visited all the keep_stop_ids.
   // For each found route, create a segment from the start point to the first keep_stop_id that the route hits.
   // Make sure to dedupe things cuz there are going to be dups for many reasons.
 
+  Problem new_problem;
 
-  return Problem();
+  std::unordered_set<size_t> keep_stop_indexes;
+  for (const std::string& stop_id : keep_stop_ids) {
+    keep_stop_indexes.insert(problem.stop_id_to_index.at(stop_id));
+  }
+
+
+  size_t num_done = 0;
+  for (const size_t keep_stop_index : keep_stop_indexes) {
+    // std::cout << "Doing starting from " << problem.stop_index_to_id[keep_stop_index] << "(" << num_done << ")\n";
+    for (const Edge& edge : problem.edges[keep_stop_index]) {
+      // std::cout << "Doing to " << problem.stop_index_to_id[edge.destination_stop_index] << "\n";
+      // TODO: Consider whether I need to handle anytime connections.
+      for (const Segment& seg : edge.schedule.segments) {
+        // std::cout << "  Doing time " << absl::StrCat(seg.departure_time, "\n");
+        AddSegmentsFromDeparture(
+          problem,
+          TimeLoc{.time = seg.departure_time, .stop_index = keep_stop_index},
+          keep_stop_indexes,
+          new_problem
+        );
+        // std::cout << "  Done\n";
+      }
+    }
+    num_done += 1;
+  }
+
+  return new_problem;
 }

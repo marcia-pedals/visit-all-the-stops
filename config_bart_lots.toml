@@ -109,3 +109,30 @@ segment_stop_ids = [
   "bart-place_WDUB",
   "bart-place_WOAK",
 ]
+
+[[gtfs]]
+dir = "data/fetched-2024-06-08/caltrain"
+prefix = "caltrain-"
+segment_stop_ids = [
+  "caltrain-san_francisco",
+  "caltrain-22nd_street",
+  "caltrain-place_MLBR",
+  "caltrain-sj_diridon",
+  "caltrain-palo_alto",
+]
+
+[[anytime_connections]]
+origin = "caltrain-place_MLBR"
+destination = "bart-place_MLBR"
+duration_min = 0
+
+[[anytime_connections]]
+origin = "caltrain-san_francisco"
+destination = "bart-place_EMBR"
+duration_min = 8
+
+[[anytime_connections]]
+origin = "caltrain-sj_diridon"
+destination = "bart-place_BERY"
+duration_min = 30
+

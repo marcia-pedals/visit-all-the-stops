@@ -1,4 +1,4 @@
-import data from "../../data/bart_viz.json"
+import data from "../../data/bart_viz_simplifier.json"
 
 export default function Home() {
   const latMin = 37.3;
@@ -31,7 +31,8 @@ export default function Home() {
         {data.edges.map((e) => {
           const [x1, y1] = vertexXy(e.origin_id);
           const [x2, y2] = vertexXy(e.destination_id);
-          return <line key={`${e.origin_id}-${e.destination_id}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="black" />;
+          const stroke = e.segments[0].departure_trip.startsWith("bart-") ? "black" : "red";
+          return <line key={`${e.origin_id}-${e.destination_id}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={stroke} />;
         })}
       </svg>
     </main>

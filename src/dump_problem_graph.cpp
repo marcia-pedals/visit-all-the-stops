@@ -4,6 +4,7 @@
 #include "Config.h"
 #include "World.h"
 #include "Problem.h"
+#include "Simplifier.h"
 #include <unordered_set>
 
 #include "absl/strings/str_cat.h"
@@ -32,6 +33,8 @@ int main(int argc, char* argv[]) {
   }
 
   Problem problem = BuildProblem(config.world);
+
+  problem = SimplifyProblem(problem, config.target_stop_ids);
 
   nlohmann::json result;
 
@@ -62,7 +65,8 @@ int main(int argc, char* argv[]) {
         nlohmann::json& result_segment = result_segments.back();
         result_segment["departure_time"] = absl::StrCat(seg.departure_time);
         result_segment["arrival_time"] = absl::StrCat(seg.arrival_time);
-        // TODO: Could include some trip identifier(s).
+        result_segment["departure_trip"] = problem.trip_index_to_id[seg.departure_trip_index];
+        result_segment["arrival_trip"] = problem.trip_index_to_id[seg.arrival_trip_index];
       }
     }
   }

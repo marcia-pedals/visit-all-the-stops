@@ -63,7 +63,7 @@ target_link_libraries(main Config MultiSegment World Solver Simplifier absl::fla
 
 # dump_problem_graph
 add_executable(dump_problem_graph src/dump_problem_graph.cpp)
-target_link_libraries(dump_problem_graph Config MultiSegment World Solver absl::flags absl::flags_parse)
+target_link_libraries(dump_problem_graph Config MultiSegment World Simplifier Solver absl::flags absl::flags_parse)
 
 # Enable testing
 enable_testing()

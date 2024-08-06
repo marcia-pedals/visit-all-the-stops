@@ -14,6 +14,15 @@ struct Segment {
 
   size_t departure_trip_index;
   size_t arrival_trip_index;
+
+  bool operator==(const Segment& other) {
+    return (
+      departure_time == other.departure_time &&
+      arrival_time == other.arrival_time &&
+      departure_trip_index == other.departure_trip_index &&
+      arrival_trip_index == other.arrival_trip_index
+    );
+  }
 };
 
 struct Schedule {
