@@ -42,7 +42,13 @@ static std::vector<Segment> GetMinimalConnectingSegments(
       (a_index == a.size() - 1) || 
       (a[a_index + 1].arrival_time.seconds + get_min_transfer_seconds(a_index + 1, b_index) > b[b_index].departure_time.seconds)
     ) {
-      result.push_back({a[a_index].departure_time, b[b_index].arrival_time, a[a_index].departure_trip_index, b[b_index].arrival_trip_index});
+      result.push_back({
+        a[a_index].departure_time,
+        b[b_index].arrival_time,
+        {},
+        a[a_index].departure_trip_index,
+        b[b_index].arrival_trip_index
+      });
     }
     ++a_index;
   }

@@ -81,6 +81,9 @@ void AddSegmentsFromDeparture(
           continue;
         }
         if (!best_arrival.has_value() || segment.arrival_time.seconds < best_arrival->time.seconds) {
+          if (segment.departure_trip_index != segment.arrival_trip_index) {
+            throw std::runtime_error("TODO: handle multi-trip segments");
+          }
           best_arrival = TimeLoc{
             .time = segment.arrival_time,
             .stop_index = edge.destination_stop_index,
@@ -111,30 +114,31 @@ void AddSegmentsFromDeparture(
 
     TimeLoc cur = visited[final_stop_index];
     TimeLoc latest_at_keep = cur;
+    std::vector<std::string> trips_from_latest_at_keep;
     // std::cout << "  Backtracking from " << original.stop_index_to_id[final_stop_index] << " to " << original.stop_index_to_id[start.stop_index] << "\n";
     while (cur.breadcrumb->previous_stop_index != start.stop_index) {
       // if (cur.stop_index != 0) {
       //   std::cout << "  " << original.stop_index_to_id[cur.stop_index] << "\n";
       // }
+      trips_from_latest_at_keep.push_back(original.trip_index_to_id[cur.breadcrumb->trip_index]);
       cur = visited[cur.breadcrumb->previous_stop_index];
       if (keep_stop_indexes.find(cur.stop_index) != keep_stop_indexes.end()) {
         latest_at_keep = cur;
+        trips_from_latest_at_keep.clear();
       }
     }
+    trips_from_latest_at_keep.push_back(original.trip_index_to_id[cur.breadcrumb->trip_index]);
     // std::cout << "  Backtracking done.\n";
 
     Segment new_segment{
       .departure_time = cur.breadcrumb->departure_time,
-      .arrival_time = latest_at_keep.time,
-      .departure_trip_index = GetOrAddTrip(
-        original.trip_index_to_id[cur.breadcrumb->trip_index],
-        new_problem
-      ),
-      .arrival_trip_index = GetOrAddTrip(
-        original.trip_index_to_id[latest_at_keep.breadcrumb->trip_index],
-        new_problem
-      )
+      .arrival_time = latest_at_keep.time
     };
+    for (auto it = trips_from_latest_at_keep.rbegin(); it != trips_from_latest_at_keep.rend(); ++it) {
+      new_segment.trip_indices.push_back(GetOrAddTrip(*it, new_problem));
+    }
+    new_segment.departure_trip_index = new_segment.trip_indices.front();
+    new_segment.arrival_trip_index = new_segment.trip_indices.back();
 
     const size_t new_problem_dest_stop_index = GetOrAddStop(
       original.stop_index_to_id[latest_at_keep.stop_index], new_problem

@@ -45,11 +45,13 @@ Problem BuildProblem(const World& world) {
     size_t origin_stop_index = GetOrAddStop(world_segment.origin_stop_id, problem);
     size_t destination_stop_index = GetOrAddStop(world_segment.destination_stop_id, problem);
     Edge* edge = GetOrAddEdge(origin_stop_index, destination_stop_index, problem);
+    size_t trip_index = GetOrAddTrip(world_segment.trip_id, problem);
     edge->schedule.segments.push_back({
       .departure_time = world_segment.departure_time,
       .arrival_time = WorldTime(world_segment.departure_time.seconds + world_segment.duration.seconds),
-      .departure_trip_index = GetOrAddTrip(world_segment.trip_id, problem),
-      .arrival_trip_index = GetOrAddTrip(world_segment.trip_id, problem),
+      .trip_indices = {trip_index},
+      .departure_trip_index = trip_index,
+      .arrival_trip_index = trip_index,
     });
   }
 

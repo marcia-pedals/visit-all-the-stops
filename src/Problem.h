@@ -12,6 +12,12 @@ struct Segment {
   WorldTime departure_time;
   WorldTime arrival_time;
 
+  // Might not be populated depending on how the segment was constructed.
+  // Mostly used for display purposes, because the departure and arrival trips are all you need to
+  // know for solving purposes.
+  std::vector<size_t> trip_indices;
+
+  // Always populated.
   size_t departure_trip_index;
   size_t arrival_trip_index;
 
@@ -20,7 +26,8 @@ struct Segment {
       departure_time == other.departure_time &&
       arrival_time == other.arrival_time &&
       departure_trip_index == other.departure_trip_index &&
-      arrival_trip_index == other.arrival_trip_index
+      arrival_trip_index == other.arrival_trip_index &&
+      trip_indices == other.trip_indices
     );
   }
 };

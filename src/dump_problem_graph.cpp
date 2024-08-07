@@ -65,8 +65,9 @@ int main(int argc, char* argv[]) {
         nlohmann::json& result_segment = result_segments.back();
         result_segment["departure_time"] = absl::StrCat(seg.departure_time);
         result_segment["arrival_time"] = absl::StrCat(seg.arrival_time);
-        result_segment["departure_trip"] = problem.trip_index_to_id[seg.departure_trip_index];
-        result_segment["arrival_trip"] = problem.trip_index_to_id[seg.arrival_trip_index];
+        for (const size_t trip_index : seg.trip_indices) {
+          result_segment["trips"].push_back(problem.trip_index_to_id[trip_index]);
+        }
       }
     }
   }
