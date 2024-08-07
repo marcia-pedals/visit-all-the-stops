@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react";
-import data from "../../data/bart_viz_simplifier.json"
+import data from "../../data/bart_viz_regional.json"
 
 function projectToLineSegmentFromOrigin(
   x: number,
@@ -125,7 +125,7 @@ export default function Home() {
         {data.edges.map((e, index) => {
           const [x1, y1] = vertexXy(e.origin_id);
           const [x2, y2] = vertexXy(e.destination_id);
-          const stroke = e.segments[0].trips.every((t) => t.startsWith("bart-")) ? "black" : "red";
+          const stroke = e.segments[0].trips.every((t) => t.startsWith("BA:")) ? "black" : "red";
           const strokeWidth = hoverEdgeIndex == index ? 3 : 1;
           return <g key={`${e.origin_id}-${e.destination_id}`}>
             <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={stroke} strokeWidth={strokeWidth} />

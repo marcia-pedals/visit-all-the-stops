@@ -54,6 +54,10 @@ struct WorldStop {
   std::optional<std::string> parent_station_id;
   std::string lat;
   std::string lon;
+
+  // Position in meters on an approximate flattening of the whole area.
+  double meters_x;
+  double meters_y;
 };
 
 struct WorldSegment {
@@ -70,6 +74,7 @@ struct WorldTripStopTimes {
   std::string stop_id;
   std::optional<WorldTime> arrival_time;
   std::optional<WorldTime> departure_time;
+  bool timepoint;
 
   bool operator==(const WorldTripStopTimes& other) const {
     return stop_id == other.stop_id && arrival_time == other.arrival_time && departure_time == other.departure_time;
@@ -123,3 +128,5 @@ std::optional<std::string> readGTFSToWorld(
   const std::unordered_set<std::string>* segment_stop_ids,
   World& world
 );
+
+void AddWalkingSegments(World& world);

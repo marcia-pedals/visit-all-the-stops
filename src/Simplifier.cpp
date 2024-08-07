@@ -33,12 +33,7 @@ void AddSegmentsFromDeparture(
 ) {
   // For each stop that has been visited, how we got to it.
   std::unordered_map<size_t, TimeLoc> visited;
-  visited[start.stop_index] = start;
-
   std::unordered_set<size_t> visited_keep_stops;
-  if (keep_stop_indexes.find(start.stop_index) != keep_stop_indexes.end()) {
-    visited_keep_stops.insert(start.stop_index);
-  }
 
   std::priority_queue<TimeLoc, std::vector<TimeLoc>, TimeLocCompare> q;
   q.push(start);
@@ -46,6 +41,12 @@ void AddSegmentsFromDeparture(
   while (!q.empty() && visited_keep_stops.size() < keep_stop_indexes.size()) {
     TimeLoc cur = q.top();
     q.pop();
+
+    if (visited.find(cur.stop_index) != visited.end()) {
+      continue;
+    }
+
+    // std::cout << absl::StrCat(visited_keep_stops.size(), " of ", keep_stop_indexes.size(), " at ", cur.time, "(start ", start.time, ")\n");
     visited[cur.stop_index] = cur;
     if (keep_stop_indexes.find(cur.stop_index) != keep_stop_indexes.end()) {
       visited_keep_stops.insert(cur.stop_index);
@@ -56,10 +57,6 @@ void AddSegmentsFromDeparture(
       if (visited.find(edge.destination_stop_index) != visited.end()) {
         continue;
       }
-      if (edge.schedule.anytime_duration.has_value() && edge.schedule.segments.size() > 0) {
-        throw std::runtime_error("can't have both kinds of connections at the same time");
-      }
-
       std::optional<TimeLoc> best_arrival;
 
       if (edge.schedule.anytime_duration.has_value()) {
@@ -74,7 +71,6 @@ void AddSegmentsFromDeparture(
         };
       }
 
-      // TODO: Could probably sort things in such a way that I can do some kind of binary search instead of looking at all of them.
       for (const Segment& segment : edge.schedule.segments) {
         // TODO: Handle min connection times.
         if (segment.departure_time.seconds < cur.time.seconds) {
@@ -175,17 +171,23 @@ Problem SimplifyProblem(const Problem& problem, const std::vector<std::string>& 
 
   std::unordered_set<size_t> keep_stop_indexes;
   for (const std::string& stop_id : keep_stop_ids) {
+    // std::cout << stop_id << "\n";
     keep_stop_indexes.insert(problem.stop_id_to_index.at(stop_id));
   }
 
 
   size_t num_done = 0;
+  std::cout << std::unitbuf;
   for (const size_t keep_stop_index : keep_stop_indexes) {
-    // std::cout << "Doing starting from " << problem.stop_index_to_id[keep_stop_index] << "(" << num_done << ")\n";
+    std::cout << "Doing starting from " << problem.stop_index_to_id[keep_stop_index] << "(" << num_done << ")\n";
     for (const Edge& edge : problem.edges[keep_stop_index]) {
       // std::cout << "Doing to " << problem.stop_index_to_id[edge.destination_stop_index] << "\n";
       // TODO: Consider whether I need to handle anytime connections.
+      int num_times = 0;
       for (const Segment& seg : edge.schedule.segments) {
+        num_times += 1;
+        if (num_times % 50 != 1) { continue; }
+
         // std::cout << "  Doing time " << absl::StrCat(seg.departure_time, "\n");
         AddSegmentsFromDeparture(
           problem,

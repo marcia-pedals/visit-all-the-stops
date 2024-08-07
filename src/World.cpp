@@ -135,7 +135,17 @@ std::optional<std::string> readGTFSToWorld(
     std::string lat = row["stop_lat"].get<>();
     std::string lon = row["stop_lon"].get<>();
     std::optional<std::string> parent_station = parent_station_raw.empty() ? std::nullopt : std::make_optional(id_prefix + parent_station_raw);
-    world.stops[stop_id] = WorldStop{stop_name, parent_station, lat, lon};
+    world.stops[stop_id] = WorldStop{
+      stop_name,
+      parent_station,
+      lat,
+      lon,
+      88080.0 * (std::stod(lon) + 122.5),
+      111320.0 * (std::stod(lat) - 37.3),
+    };
+    // Approximate conversions around this area:
+    // 1 lat = 111,320m
+    // 1 lon = 88,080m
   }
 
   // Validate segment_stop_ids.
@@ -206,7 +216,8 @@ std::optional<std::string> readGTFSToWorld(
       WorldTripStopTimes{
         stop_id,
         std::get<0>(arrival_time),
-        std::get<0>(departure_time)
+        std::get<0>(departure_time),
+        row["timepoint"].get<>() == "1",
       }
     );
   }
@@ -251,6 +262,13 @@ std::optional<std::string> readGTFSToWorld(
       if (segment_stop_ids != nullptr && !segment_stop_ids->contains(stop_time.stop_id)) {
         continue;
       }
+
+      if (!stop_time.departure_time.has_value() || !stop_time.arrival_time.has_value()) {
+        // !stop_time.timepoint || 
+        // TODO: Maybe handle non-timepoints and things without dep/arr times?
+        continue;
+      }
+
       if (!prev.has_value()) {
         prev = stop_time;
         continue;
@@ -258,9 +276,13 @@ std::optional<std::string> readGTFSToWorld(
 
       std::string origin_stop_id = prev->stop_id;
       std::string destination_stop_id = stop_time.stop_id;
-      assert(prev->departure_time.has_value());
+      if (!prev->departure_time.has_value()) {
+        return absl::StrCat("No departure time on trip ", entry.first);
+      }
       WorldTime departure_time = prev->departure_time.value();
-      assert(stop_time.arrival_time.has_value());
+      if (!prev->arrival_time.has_value()) {
+        return absl::StrCat("No arrival time on trip ", entry.first);
+      }
       WorldTime arrival_time = stop_time.arrival_time.value();
       WorldDuration duration = WorldDuration(arrival_time.seconds - departure_time.seconds);
       world.segments.push_back(WorldSegment{
@@ -308,6 +330,61 @@ void World::prettyDepartureTable(const std::string& stop_id, const std::optional
       stops.at(segment.destination_stop_id).name,
       absl::StrCat(WorldTime(segment.departure_time.seconds + segment.duration.seconds), "") // TODO: Figure out how to use formatter.
     );
+  }
+}
+
+void AddWalkingSegments(World& world) {
+  // We only do this for "root" (parentless) stops, because all our segments go through the roots.
+  std::vector<std::string> root_stops;
+  for (const auto& entry : world.stops) {
+    const auto& stop_id = entry.first;
+    const auto& stop = entry.second;
+    if (!stop.parent_station_id.has_value()) {
+      root_stops.push_back(stop_id);
+    }
+  }
+  std::cout << "Num root stops: " << root_stops.size() << "\n";
+
+  std::sort(root_stops.begin(), root_stops.end(), [&world](const std::string& a, const std::string& b) {
+    return world.stops.at(a).meters_x < world.stops.at(b).meters_x;
+  });
+
+  const double MAX_WALK_METERS = 500;
+  const double WALK_METERS_PER_SECOND = 1;
+
+  int i = 0;
+  int jmin = 0;
+  int jmax = 0;
+  while (i < root_stops.size()) {
+    if (i % 1000 == 0) {
+      std::cout << i << "\n";
+    }
+
+    const WorldStop& stop_i = world.stops.at(root_stops[i]);
+    while (world.stops.at(root_stops[jmin]).meters_x < stop_i.meters_x - MAX_WALK_METERS) {
+      jmin += 1;
+    }
+    while (jmax < root_stops.size() && world.stops.at(root_stops[jmax]).meters_x < stop_i.meters_x + MAX_WALK_METERS) {
+      jmax += 1;
+    }
+    for (int j = jmin; j < jmax; ++j) {
+      if (j == i) {
+        continue;
+      }
+      const WorldStop& stop_j = world.stops.at(root_stops[j]);
+      const double xDist = stop_i.meters_x - stop_j.meters_x;
+      const double yDist = stop_i.meters_y - stop_j.meters_y;
+      const double dist = sqrt(xDist * xDist + yDist * yDist);
+      // std::cout << stop_i.name << " " << stop_j.name << " " << dist << "\n";
+      if (dist < MAX_WALK_METERS * MAX_WALK_METERS) {
+        world.anytime_connections.push_back(WorldAnytimeConnection{
+          .origin_stop_id = root_stops[i],
+          .destination_stop_id = root_stops[j],
+          .duration = WorldDuration(dist / WALK_METERS_PER_SECOND)
+        });
+      }
+    }
+    i += 1;
   }
 }
 

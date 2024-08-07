@@ -62,5 +62,12 @@ Problem BuildProblem(const World& world) {
     edge->schedule.anytime_duration = anytime_connection.duration;
   }
 
+  // for (size_t i = 0; i < problem.edges.size(); ++i) {
+  //   for (size_t j = 0; j < problem.edges[i].size(); ++j) {
+  //     auto& segs = problem.edges[i][j].schedule.segments;
+  //     std::sort(segs.begin(), segs.end(), [](const Segment& a, const Segment& b) { return a.departure_time.seconds < b.departure_time.seconds; });
+  //   }
+  // }
+
   return problem;
 }

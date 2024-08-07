@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
   Config config;
   std::optional<std::string> err_opt = readConfig(
     positional[1],
-    {.IgnoreSegmentStopIds = false},
+    {.IgnoreSegmentStopIds = true},
     config
   );
   if (err_opt.has_value()) {
@@ -32,9 +32,14 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  AddWalkingSegments(config.world);
+  std::cout << "added walking segments\n";
+
   Problem problem = BuildProblem(config.world);
+  std::cout << "built\n";
 
   problem = SimplifyProblem(problem, config.target_stop_ids);
+  std::cout << "simplified\n";
 
   nlohmann::json result;
 
