@@ -71,26 +71,36 @@ void AddSegmentsFromDeparture(
         };
       }
 
-      for (const Segment& segment : edge.schedule.segments) {
-        // TODO: Handle min connection times.
-        if (segment.departure_time.seconds < cur.time.seconds) {
-          continue;
-        }
-        if (!best_arrival.has_value() || segment.arrival_time.seconds < best_arrival->time.seconds) {
-          if (segment.departure_trip_index != segment.arrival_trip_index) {
+      auto it = std::lower_bound(
+        edge.schedule.segments.begin(),
+        edge.schedule.segments.end(),
+        cur.time,
+        [](const Segment& seg, const WorldTime& cur_time) { return seg.departure_time.seconds < cur_time.seconds; }
+      );
+      while (
+        it != edge.schedule.segments.end() &&
+        (
+          // We can stop checking departures if they depart after the best arrival time that we have already found.
+          !best_arrival.has_value() || it->departure_time.seconds < best_arrival->time.seconds
+        )
+      ) {
+        if (!best_arrival.has_value() || it->arrival_time.seconds < best_arrival->time.seconds) {
+          if (it->departure_trip_index != it->arrival_trip_index) {
             throw std::runtime_error("TODO: handle multi-trip segments");
           }
           best_arrival = TimeLoc{
-            .time = segment.arrival_time,
+            .time = it->arrival_time,
             .stop_index = edge.destination_stop_index,
             .breadcrumb = Breadcrumb{
               .previous_stop_index = cur.stop_index,
-              .departure_time = segment.departure_time,
-              .trip_index = segment.departure_trip_index,
+              .departure_time = it->departure_time,
+              .trip_index = it->departure_trip_index,
             }
           };
         }
+        ++it;
       }
+
       if (best_arrival.has_value()) {
         q.push(*best_arrival);
       }
@@ -186,7 +196,7 @@ Problem SimplifyProblem(const Problem& problem, const std::vector<std::string>& 
       int num_times = 0;
       for (const Segment& seg : edge.schedule.segments) {
         num_times += 1;
-        if (num_times % 50 != 1) { continue; }
+        if (num_times % 100 != 1) { continue; }
 
         // std::cout << "  Doing time " << absl::StrCat(seg.departure_time, "\n");
         AddSegmentsFromDeparture(
