@@ -28,33 +28,36 @@ struct TimeLocCompare {
 void AddSegmentsFromDeparture(
   const Problem& original,
   TimeLoc start,
-  const std::unordered_set<size_t>& keep_stop_indexes,
+  // const std::unordered_set<size_t>& keep_stop_indexes,
+  const std::vector<size_t>& keep_stop_indexes,
+  const std::vector<bool>& is_keep_stop,
   Problem& new_problem
 ) {
   // For each stop that has been visited, how we got to it.
-  std::unordered_map<size_t, TimeLoc> visited;
-  std::unordered_set<size_t> visited_keep_stops;
+  std::vector<std::optional<TimeLoc>> visited(original.edges.size());
+
+  int num_visited_keep_stops = 0;
 
   std::priority_queue<TimeLoc, std::vector<TimeLoc>, TimeLocCompare> q;
   q.push(start);
 
-  while (!q.empty() && visited_keep_stops.size() < keep_stop_indexes.size()) {
+  while (!q.empty() && num_visited_keep_stops < keep_stop_indexes.size()) {
     TimeLoc cur = q.top();
     q.pop();
 
-    if (visited.find(cur.stop_index) != visited.end()) {
+    if (visited[cur.stop_index].has_value()) {
       continue;
     }
 
     // std::cout << absl::StrCat(visited_keep_stops.size(), " of ", keep_stop_indexes.size(), " at ", cur.time, "(start ", start.time, ")\n");
     visited[cur.stop_index] = cur;
-    if (keep_stop_indexes.find(cur.stop_index) != keep_stop_indexes.end()) {
-      visited_keep_stops.insert(cur.stop_index);
+    if (is_keep_stop[cur.stop_index]) {
+      num_visited_keep_stops += 1;
     }
 
     const std::vector<Edge>& outgoing_edges = original.edges[cur.stop_index];
     for (const Edge& edge : outgoing_edges) {
-      if (visited.find(edge.destination_stop_index) != visited.end()) {
+      if (visited[edge.destination_stop_index].has_value()) {
         continue;
       }
       std::optional<TimeLoc> best_arrival;
@@ -113,27 +116,36 @@ void AddSegmentsFromDeparture(
     original.stop_index_to_id[start.stop_index], new_problem
   );
 
+  // Trip index in original problem.
+  std::vector<size_t> trips_from_latest_at_keep;
+  trips_from_latest_at_keep.reserve(50);
+
   for (const size_t final_stop_index : keep_stop_indexes) {
-    if (final_stop_index == start.stop_index || visited.find(final_stop_index) == visited.end()) {
+    if (final_stop_index == start.stop_index || !visited[final_stop_index].has_value()) {
       continue;
     }
 
-    TimeLoc cur = visited[final_stop_index];
+    TimeLoc cur = *visited[final_stop_index];
     TimeLoc latest_at_keep = cur;
-    std::vector<std::string> trips_from_latest_at_keep;
+    trips_from_latest_at_keep.clear();
+
     // std::cout << "  Backtracking from " << original.stop_index_to_id[final_stop_index] << " to " << original.stop_index_to_id[start.stop_index] << "\n";
     while (cur.breadcrumb->previous_stop_index != start.stop_index) {
       // if (cur.stop_index != 0) {
       //   std::cout << "  " << original.stop_index_to_id[cur.stop_index] << "\n";
       // }
-      trips_from_latest_at_keep.push_back(original.trip_index_to_id[cur.breadcrumb->trip_index]);
-      cur = visited[cur.breadcrumb->previous_stop_index];
-      if (keep_stop_indexes.find(cur.stop_index) != keep_stop_indexes.end()) {
+      if (trips_from_latest_at_keep.size() == 0 || trips_from_latest_at_keep.back() != cur.breadcrumb->trip_index) {
+        trips_from_latest_at_keep.push_back(cur.breadcrumb->trip_index);
+      }
+      cur = *visited[cur.breadcrumb->previous_stop_index];
+      if (is_keep_stop[cur.stop_index]) {
         latest_at_keep = cur;
         trips_from_latest_at_keep.clear();
       }
     }
-    trips_from_latest_at_keep.push_back(original.trip_index_to_id[cur.breadcrumb->trip_index]);
+    if (trips_from_latest_at_keep.size() == 0 || trips_from_latest_at_keep.back() != cur.breadcrumb->trip_index) {
+      trips_from_latest_at_keep.push_back(cur.breadcrumb->trip_index);
+    }
     // std::cout << "  Backtracking done.\n";
 
     Segment new_segment{
@@ -141,7 +153,7 @@ void AddSegmentsFromDeparture(
       .arrival_time = latest_at_keep.time
     };
     for (auto it = trips_from_latest_at_keep.rbegin(); it != trips_from_latest_at_keep.rend(); ++it) {
-      new_segment.trip_indices.push_back(GetOrAddTrip(*it, new_problem));
+      new_segment.trip_indices.push_back(GetOrAddTrip(original.trip_index_to_id[*it], new_problem));
     }
     new_segment.departure_trip_index = new_segment.trip_indices.front();
     new_segment.arrival_trip_index = new_segment.trip_indices.back();
@@ -179,10 +191,13 @@ Problem SimplifyProblem(const Problem& problem, const std::vector<std::string>& 
 
   Problem new_problem;
 
-  std::unordered_set<size_t> keep_stop_indexes;
+  std::vector<size_t> keep_stop_indexes;
+  std::vector<bool> is_keep_stop(problem.edges.size());
   for (const std::string& stop_id : keep_stop_ids) {
     // std::cout << stop_id << "\n";
-    keep_stop_indexes.insert(problem.stop_id_to_index.at(stop_id));
+    const size_t stop_index = problem.stop_id_to_index.at(stop_id);
+    keep_stop_indexes.push_back(stop_index);
+    is_keep_stop[stop_index] = true;
   }
 
 
@@ -196,13 +211,14 @@ Problem SimplifyProblem(const Problem& problem, const std::vector<std::string>& 
       int num_times = 0;
       for (const Segment& seg : edge.schedule.segments) {
         num_times += 1;
-        if (num_times % 100 != 1) { continue; }
+        if (num_times % 25 != 1) { continue; }
 
         // std::cout << "  Doing time " << absl::StrCat(seg.departure_time, "\n");
         AddSegmentsFromDeparture(
           problem,
           TimeLoc{.time = seg.departure_time, .stop_index = keep_stop_index},
           keep_stop_indexes,
+          is_keep_stop,
           new_problem
         );
         // std::cout << "  Done\n";
