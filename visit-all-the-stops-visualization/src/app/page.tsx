@@ -3,6 +3,52 @@
 import { useState } from "react";
 import data from "../../data/bart_viz_regional.json"
 
+function parseTime(time: string): number {
+  return 60 * parseInt(time.substring(0, 2), 10) + parseInt(time.substring(4, 6));
+}
+
+function filterData(d: typeof data): typeof data {
+  const firstBart: Record<string, number> = {};
+  const lastBart: Record<string, number> = {};
+  for (const edge of d.edges) {
+    const origin = edge.origin_id;
+    for (const seg of edge.segments) {
+      if (!seg.trips.every((t) => t.startsWith("BA:"))) {
+        continue;
+      }
+      const time = parseTime(seg.departure_time);
+      console.log(time);
+      if (!(origin in firstBart)) { firstBart[origin] = time; }
+      if (!(origin in lastBart)) { lastBart[origin] = time; }
+      firstBart[origin] = Math.min(firstBart[origin], time);
+      lastBart[origin] = Math.max(lastBart[origin], time);
+    }
+  }
+
+  const newEdges = d.edges.flatMap((edge) => {
+    const newSegments = edge.segments.filter((seg) => (
+        parseTime(seg.departure_time) >= firstBart[edge.origin_id] &&
+        parseTime(seg.arrival_time) <= lastBart[edge.destination_id]
+      ));
+      if (newSegments.length === 0) {
+        return [];
+      }
+      return [
+        {
+          ...edge,
+          segments: newSegments,
+        }
+      ];
+  });
+
+  return {
+    ...d,
+    edges: newEdges
+  };
+}
+
+const fData = filterData(data);
+
 function projectToLineSegmentFromOrigin(
   x: number,
   y: number,
@@ -68,14 +114,14 @@ export default function Home() {
   const mapLon = (lon: number) => (lon - lonMin) / (lonMax - lonMin) * xMax;
 
   const vertexXy = (id: string) => {
-    const v = data.vertices[id];
+    const v = fData.vertices[id];
     return [mapLon(parseFloat(v.lon)), mapLat(parseFloat(v.lat))];
   };
 
   const closestEdgeIndex = (x: number, y: number): number | undefined => {
     let closestSqDist = 20 * 20;
     let closestIndex = undefined;
-    data.edges.forEach((e, index) => {
+    fData.edges.forEach((e, index) => {
       const [x1, y1] = vertexXy(e.origin_id);
       const [x2, y2] = vertexXy(e.destination_id);
       const sqDist = sqDistToLineSegment(x, y, x1, y1, x2, y2);
@@ -95,7 +141,7 @@ export default function Home() {
   }
 
   const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | undefined>();
-  const selectedEdge = selectedEdgeIndex != undefined ? data.edges[selectedEdgeIndex] : undefined;
+  const selectedEdge = selectedEdgeIndex != undefined ? fData.edges[selectedEdgeIndex] : undefined;
 
   const handleClick = () => {
     setSelectedEdgeIndex(hoverEdgeIndex);
@@ -103,7 +149,7 @@ export default function Home() {
 
   const handleFlip = () => {
     let newIndex;
-    data.edges.forEach((e, i) => {
+    fData.edges.forEach((e, i) => {
       if (e.destination_id == selectedEdge?.origin_id && e.origin_id == selectedEdge.destination_id) {
         newIndex = i;
       }
@@ -114,15 +160,15 @@ export default function Home() {
   return (
     <main style={{display: "flex", flexDirection: "row", height: "100vh"}}>
       <svg height={yMax} width={xMax} onMouseMove={handleMouseMove} onClick={handleClick} style={{cursor: "default"}}>
-        {Object.keys(data.vertices).map((id) => {
-          const v = data.vertices[id];
+        {Object.keys(fData.vertices).map((id) => {
+          const v = fData.vertices[id];
           const [x, y] = vertexXy(id);
           return <g key={id} onClick={() => console.log(id)}>
             <circle cx={x} cy={y} r={2} fill="black" />
             <text x={x + 4} y={y + 4} fontSize={10}>{v.name}</text>
           </g>;
         })}
-        {data.edges.map((e, index) => {
+        {fData.edges.map((e, index) => {
           const [x1, y1] = vertexXy(e.origin_id);
           const [x2, y2] = vertexXy(e.destination_id);
           const stroke = e.segments[0].trips.every((t) => t.startsWith("BA:")) ? "black" : "red";
