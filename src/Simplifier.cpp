@@ -14,14 +14,20 @@ struct Breadcrumb {
 };
 
 struct TimeLoc {
-  WorldTime time;
-  size_t stop_index;
-  std::optional<Breadcrumb> breadcrumb;
+  WorldTime time = WorldTime(10 * 24 * 3600);
+  size_t stop_index = 0;
+  std::optional<Breadcrumb> breadcrumb = std::nullopt;
+  bool visited = false;
 };
 
-struct TimeLocCompare {
- bool operator()(const TimeLoc& l, const TimeLoc& r) {
-  return l.time.seconds > r.time.seconds;
+struct HeapEntry {
+  unsigned int priority;
+  size_t stop_index;
+};
+
+struct HeapEntryCompare {
+ bool operator()(const HeapEntry& l, const HeapEntry& r) {
+  return l.priority > r.priority;
  }
 };
 
@@ -33,31 +39,35 @@ void AddSegmentsFromDeparture(
   const std::vector<bool>& is_keep_stop,
   Problem& new_problem
 ) {
-  // For each stop that has been visited, how we got to it.
-  std::vector<std::optional<TimeLoc>> visited(original.edges.size());
+  std::vector<TimeLoc> stop_state(original.edges.size());
 
   int num_visited_keep_stops = 0;
 
-  std::priority_queue<TimeLoc, std::vector<TimeLoc>, TimeLocCompare> q;
-  q.push(start);
+  std::priority_queue<HeapEntry, std::vector<HeapEntry>, HeapEntryCompare> q;
+  stop_state[start.stop_index] = start;
+  q.push(HeapEntry{
+    .priority = start.time.seconds,
+    .stop_index = start.stop_index
+  });
 
   while (!q.empty() && num_visited_keep_stops < keep_stop_indexes.size()) {
-    TimeLoc cur = q.top();
+    HeapEntry top = q.top();
     q.pop();
 
-    if (visited[cur.stop_index].has_value()) {
+    TimeLoc cur = stop_state[top.stop_index];
+    if (cur.visited) {
       continue;
     }
 
     // std::cout << absl::StrCat(visited_keep_stops.size(), " of ", keep_stop_indexes.size(), " at ", cur.time, "(start ", start.time, ")\n");
-    visited[cur.stop_index] = cur;
+    stop_state[cur.stop_index].visited = true;
     if (is_keep_stop[cur.stop_index]) {
       num_visited_keep_stops += 1;
     }
 
     const std::vector<Edge>& outgoing_edges = original.edges[cur.stop_index];
     for (const Edge& edge : outgoing_edges) {
-      if (visited[edge.destination_stop_index].has_value()) {
+      if (stop_state[edge.destination_stop_index].visited) {
         continue;
       }
       std::optional<TimeLoc> best_arrival;
@@ -70,7 +80,8 @@ void AddSegmentsFromDeparture(
             .previous_stop_index = cur.stop_index,
             .departure_time = cur.time,
             .trip_index = 0
-          }
+          },
+          .visited = false
         };
       }
 
@@ -98,14 +109,19 @@ void AddSegmentsFromDeparture(
               .previous_stop_index = cur.stop_index,
               .departure_time = it->departure_time,
               .trip_index = it->departure_trip_index,
-            }
+            },
+            .visited = false
           };
         }
         ++it;
       }
 
-      if (best_arrival.has_value()) {
-        q.push(*best_arrival);
+      if (best_arrival.has_value() && best_arrival->time.seconds < stop_state[best_arrival->stop_index].time.seconds) {
+        stop_state[best_arrival->stop_index] = *best_arrival;
+        q.push(HeapEntry{
+          .priority = best_arrival->time.seconds,
+          .stop_index = best_arrival->stop_index
+        });
       }
     }
   }
@@ -121,11 +137,11 @@ void AddSegmentsFromDeparture(
   trips_from_latest_at_keep.reserve(50);
 
   for (const size_t final_stop_index : keep_stop_indexes) {
-    if (final_stop_index == start.stop_index || !visited[final_stop_index].has_value()) {
+    if (final_stop_index == start.stop_index || !stop_state[final_stop_index].visited) {
       continue;
     }
 
-    TimeLoc cur = *visited[final_stop_index];
+    TimeLoc cur = stop_state[final_stop_index];
     TimeLoc latest_at_keep = cur;
     trips_from_latest_at_keep.clear();
 
@@ -137,7 +153,7 @@ void AddSegmentsFromDeparture(
       if (trips_from_latest_at_keep.size() == 0 || trips_from_latest_at_keep.back() != cur.breadcrumb->trip_index) {
         trips_from_latest_at_keep.push_back(cur.breadcrumb->trip_index);
       }
-      cur = *visited[cur.breadcrumb->previous_stop_index];
+      cur = stop_state[cur.breadcrumb->previous_stop_index];
       if (is_keep_stop[cur.stop_index]) {
         latest_at_keep = cur;
         trips_from_latest_at_keep.clear();
@@ -208,15 +224,15 @@ Problem SimplifyProblem(const Problem& problem, const std::vector<std::string>& 
     for (const Edge& edge : problem.edges[keep_stop_index]) {
       // std::cout << "Doing to " << problem.stop_index_to_id[edge.destination_stop_index] << "\n";
       // TODO: Consider whether I need to handle anytime connections.
-      int num_times = 0;
+      // int num_times = 0;
       for (const Segment& seg : edge.schedule.segments) {
-        num_times += 1;
-        if (num_times % 100 != 1) { continue; }
+        // num_times += 1;
+        // if (num_times % 10 != 1) { continue; }
 
         // std::cout << "  Doing time " << absl::StrCat(seg.departure_time, "\n");
         AddSegmentsFromDeparture(
           problem,
-          TimeLoc{.time = seg.departure_time, .stop_index = keep_stop_index},
+          TimeLoc{.time = seg.departure_time, .stop_index = keep_stop_index, .breadcrumb = std::nullopt, .visited = false},
           keep_stop_indexes,
           is_keep_stop,
           new_problem
