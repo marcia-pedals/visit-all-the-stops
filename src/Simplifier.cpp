@@ -211,7 +211,7 @@ Problem SimplifyProblem(const Problem& problem, const std::vector<std::string>& 
       int num_times = 0;
       for (const Segment& seg : edge.schedule.segments) {
         num_times += 1;
-        if (num_times % 10 != 1) { continue; }
+        if (num_times % 100 != 1) { continue; }
 
         // std::cout << "  Doing time " << absl::StrCat(seg.departure_time, "\n");
         AddSegmentsFromDeparture(
