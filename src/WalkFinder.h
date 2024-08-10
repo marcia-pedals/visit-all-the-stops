@@ -2,9 +2,16 @@
 
 #include <vector>
 
+#include "cereal/types/vector.hpp"
+
 struct AdjacencyList {
   // edges[i] are the indices of the stops that can be reached from stop i.
   std::vector<std::vector<size_t>> edges;
+
+  template<class Archive>
+  void serialize(Archive& ar) {
+    ar(CEREAL_NVP(edges));
+  }
 };
 
 template <typename WalkVisitor, size_t MaxStops>
@@ -57,7 +64,8 @@ static void FindAllMinimalWalksDFSRec(
   const std::bitset<MaxStops> target_stops,
   RouteSearchStateDFS<MaxStops>& state,
   size_t current_stop,
-  const std::bitset<MaxStops> current_visited
+  const std::bitset<MaxStops> current_visited,
+  const int level
 ) {
   if (!visitor.PushStop(current_stop)) {
     visitor.PopStop();
@@ -87,10 +95,19 @@ static void FindAllMinimalWalksDFSRec(
     }
   }
 
+  int num_processed_next_stops = 0;
   for (const size_t next_stop: adjacency_list.edges[current_stop]) {
+    if (level <= 1) {
+      for (int i = 0; i < level; ++i) {
+        std::cout << "  ";
+      }
+      std::cout << num_processed_next_stops << " of " << adjacency_list.edges[current_stop].size() << "\n";
+    }
+
     std::bitset<MaxStops> next_visited = current_visited;
     next_visited[next_stop] = true;
-    FindAllMinimalWalksDFSRec(visitor, adjacency_list, target_stops, state, next_stop, next_visited);
+    FindAllMinimalWalksDFSRec(visitor, adjacency_list, target_stops, state, next_stop, next_visited, level + 1);
+    num_processed_next_stops += 1;
   }
 
   state.visited_at_stop[current_stop] = old_visited_at_current_stop;
@@ -117,7 +134,7 @@ void FindAllMinimalWalksDFS(
     state.visited_at_stop.resize(adjacency_list.edges.size());
     std::bitset<MaxStops> start_visited;
     start_visited[start] = true;
-    FindAllMinimalWalksDFSRec(visitor, adjacency_list, target_stops, state, start, start_visited);
+    FindAllMinimalWalksDFSRec(visitor, adjacency_list, target_stops, state, start, start_visited, 0);
 
     processed_starts += 1;
     std::cout << "processed " << processed_starts << " of " << target_stops.count() << "\n";

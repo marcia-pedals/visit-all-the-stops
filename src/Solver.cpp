@@ -149,10 +149,11 @@ struct SolverWalkVisitor {
       return false;
     }
 
-    const unsigned int min_transfer_seconds = (
-      (problem.stop_id_to_index.at("bart-place_COLS") == prev_state.stop_index ||
-       problem.stop_id_to_index.at("bart-place_RICH") == prev_state.stop_index) ? 1 * 60 : 0 * 60
-    );
+    // const unsigned int min_transfer_seconds = (
+    //   (problem.stop_id_to_index.at("bart-place_COLS") == prev_state.stop_index ||
+    //    problem.stop_id_to_index.at("bart-place_RICH") == prev_state.stop_index) ? 1 * 60 : 0 * 60
+    // );
+    const unsigned int min_transfer_seconds = 0;
     state.schedule = GetMinimalConnectingSchedule(prev_state.schedule, *schedule, min_transfer_seconds);
 
     const unsigned int captured_best_duration = best_duration;
@@ -319,16 +320,10 @@ struct PrettyPrintWalkState {
 
 void Solve(
   const World& world,
+  const Problem& problem,
   const std::vector<std::string>& target_stop_ids
 ) {
-  std::cout << "Building problem...\n";
-  Problem problem = BuildProblem(world);
-  std::cout << "Built problem with " << problem.stop_index_to_id.size() << " stops.\n";
-
-  // problem = NaivePruneProblem(problem);
-  // return;
-
-  std::bitset<32> target_stops;
+  std::bitset<64> target_stops;
   for (const std::string& stop_id : target_stop_ids) {
     if (problem.stop_id_to_index.contains(stop_id)) {
       target_stops[problem.stop_id_to_index.at(stop_id)] = true;
@@ -339,8 +334,10 @@ void Solve(
     return;
   }
 
-  SolverWalkVisitor visitor{.problem = problem};
-  FindAllMinimalWalksDFS<SolverWalkVisitor, 32>(
+  std::cout << "Solving...\n";
+
+  SolverWalkVisitor visitor{.problem = problem, .best_duration = 5 * 3600 + 35 * 60};
+  FindAllMinimalWalksDFS<SolverWalkVisitor, 64>(
     visitor,
     problem.adjacency_list,
     target_stops

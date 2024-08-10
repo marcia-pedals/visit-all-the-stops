@@ -30,6 +30,8 @@ include_directories(third_party/tomlplusplus/include)
 
 include_directories(third_party/json/single_include)
 
+include_directories(third_party/cereal/include)
+
 # MultiSegment
 add_library(MultiSegment src/MultiSegment.cpp)
 

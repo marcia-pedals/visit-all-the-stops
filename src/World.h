@@ -10,12 +10,19 @@
 #include "absl/strings/str_format.h"
 #include "absl/time/civil_time.h"
 
+#include "cereal/cereal.hpp"
+
 struct WorldTime {
   // Seconds since beginning of service day.
   unsigned int seconds;
 
   WorldTime() : seconds(0) {}
   WorldTime(unsigned int seconds) : seconds(seconds) {}
+
+  template<class Archive>
+  void serialize(Archive& ar) {
+    ar(CEREAL_NVP(seconds));
+  }
 
   template <typename Sink>
   friend void AbslStringify(Sink& sink, const WorldTime& time) {
@@ -33,6 +40,11 @@ struct WorldDuration {
 
   WorldDuration() : seconds(0) {}
   WorldDuration(unsigned int seconds) : seconds(seconds) {}
+
+  template<class Archive>
+  void serialize(Archive& ar) {
+    ar(CEREAL_NVP(seconds));
+  }
 
   template <typename Sink>
   friend void AbslStringify(Sink& sink, const WorldDuration& duration) {

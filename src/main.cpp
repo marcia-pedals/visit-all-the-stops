@@ -15,6 +15,8 @@
 #include <toml++/toml.h>
 #include <absl/flags/parse.h>
 
+#include "cereal/archives/json.hpp"
+
 int main(int argc, char* argv[]) {
   std::vector<char*> positional = absl::ParseCommandLine(argc, argv);
   if (positional.size() != 2) {
@@ -25,15 +27,42 @@ int main(int argc, char* argv[]) {
   Config config;
   std::optional<std::string> err_opt = readConfig(
     positional[1],
-    {.IgnoreSegmentStopIds = false},
+    {.IgnoreSegmentStopIds = true},
     config
   );
   if (err_opt.has_value()) {
     std::cerr << err_opt.value() << "\n";
     return 1;
   }
-   Problem problem = BuildProblem(config.world);
-   SimplifyProblem(problem, config.target_stop_ids);
+
+  //  Problem problem = BuildProblem(config.world);
+  //  SimplifyProblem(problem, config.target_stop_ids);
+
+  Problem problem;
+  std::ifstream ser_if("problem.json");
+  {
+    cereal::JSONInputArchive readproblem(ser_if);
+    readproblem(problem);
+  }
+
+  // for (size_t stop_index = 0; stop_index < problem.edges.size(); ++stop_index) {
+  //   for (Edge& edge : problem.edges[stop_index]) {
+  //     std::erase_if(
+  //       edge.schedule.segments,
+  //       [](const Segment& seg) {
+  //         return seg.departure_time.seconds > 22 * 3600 || seg.arrival_time.seconds < 8 * 3600;
+  //       }
+  //     );
+  //   }
+  //   std::erase_if(
+  //     problem.edges[stop_index],
+  //     [](const Edge& edge) { return edge.schedule.segments.size() == 0 && !edge.schedule.anytime_duration.has_value(); }
+  //   );
+  //   problem.adjacency_list.edges[stop_index].clear();
+  //   for (const Edge& edge : problem.edges[stop_index]) {
+  //     problem.adjacency_list.edges[stop_index].push_back(edge.destination_stop_index);
+  //   }
+  // }
 
   // size_t sfia = problem.stop_id_to_index["bart-place_SFIA"];
   // size_t mlbr = problem.stop_id_to_index["bart-place_MLBR"];
@@ -44,7 +73,7 @@ int main(int argc, char* argv[]) {
   //   }
   // }
 
-  // Solve(config.world, config.target_stop_ids);
+  Solve(config.world, problem, config.target_stop_ids);
 
   return 0;
 }

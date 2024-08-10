@@ -10,6 +10,9 @@
 #include "absl/strings/str_cat.h"
 #include "absl/time/civil_time.h"
 
+#include "cereal/cereal.hpp"
+#include "cereal/archives/json.hpp"
+
 #include <toml++/toml.h>
 #include <absl/flags/parse.h>
 #include <nlohmann/json.hpp>
@@ -40,6 +43,13 @@ int main(int argc, char* argv[]) {
 
   problem = SimplifyProblem(problem, config.target_stop_ids);
   std::cout << "simplified\n";
+
+  std::ofstream ser_of("problem.json");
+  {
+    cereal::JSONOutputArchive archive(ser_of);
+    archive(problem);
+  }
+  std::cout << "dumped\n";
 
   nlohmann::json result;
 

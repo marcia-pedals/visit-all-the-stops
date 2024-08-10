@@ -8,28 +8,30 @@ function parseTime(time: string): number {
 }
 
 function filterData(d: typeof data): typeof data {
-  const firstBart: Record<string, number> = {};
-  const lastBart: Record<string, number> = {};
-  for (const edge of d.edges) {
-    const origin = edge.origin_id;
-    for (const seg of edge.segments) {
-      if (!seg.trips.every((t) => t.startsWith("BA:"))) {
-        continue;
-      }
-      const time = parseTime(seg.departure_time);
-      console.log(time);
-      if (!(origin in firstBart)) { firstBart[origin] = time; }
-      if (!(origin in lastBart)) { lastBart[origin] = time; }
-      firstBart[origin] = Math.min(firstBart[origin], time);
-      lastBart[origin] = Math.max(lastBart[origin], time);
-    }
-  }
+  // const firstBart: Record<string, number> = {};
+  // const lastBart: Record<string, number> = {};
+  // for (const edge of d.edges) {
+  //   const origin = edge.origin_id;
+  //   for (const seg of edge.segments) {
+  //     if (!seg.trips.every((t) => t.startsWith("BA:"))) {
+  //       continue;
+  //     }
+  //     const time = parseTime(seg.departure_time);
+  //     console.log(time);
+  //     if (!(origin in firstBart)) { firstBart[origin] = time; }
+  //     if (!(origin in lastBart)) { lastBart[origin] = time; }
+  //     firstBart[origin] = Math.min(firstBart[origin], time);
+  //     lastBart[origin] = Math.max(lastBart[origin], time);
+  //   }
+  // }
+
+  const startTime = parseTime("08:00");
+  const endTime = parseTime("22:00");
 
   const newEdges = d.edges.flatMap((edge) => {
     const newSegments = edge.segments.filter((seg) => (
-        parseTime(seg.departure_time) >= firstBart[edge.origin_id] &&
-        parseTime(seg.arrival_time) <= lastBart[edge.destination_id]
-      ));
+        parseTime(seg.departure_time) >= startTime && parseTime(seg.arrival_time) <= endTime
+      )).sort((a, b) => (parseTime(a.departure_time) - parseTime(b.departure_time)));
       if (newSegments.length === 0) {
         return [];
       }
