@@ -4,7 +4,7 @@ import { useState } from "react";
 import data from "../../data/bart_viz_faster.json"
 
 function parseTime(time: string): number {
-  return 60 * parseInt(time.substring(0, 2), 10) + parseInt(time.substring(4, 6));
+  return 60 * parseInt(time.substring(0, 2), 10) + parseInt(time.substring(3, 5), 10);
 }
 
 function filterData(d: typeof data): typeof data {
@@ -25,22 +25,22 @@ function filterData(d: typeof data): typeof data {
   //   }
   // }
 
-  const startTime = parseTime("08:00");
+  const startTime = parseTime("05:30");
   const endTime = parseTime("22:00");
 
   const newEdges = d.edges.flatMap((edge) => {
     const newSegments = edge.segments.filter((seg) => (
-        parseTime(seg.departure_time) >= startTime && parseTime(seg.arrival_time) <= endTime
-      )).sort((a, b) => (parseTime(a.departure_time) - parseTime(b.departure_time)));
-      if (newSegments.length === 0) {
-        return [];
+      parseTime(seg.departure_time) >= startTime && parseTime(seg.arrival_time) <= endTime
+    )).sort((a, b) => (parseTime(a.departure_time) - parseTime(b.departure_time)));
+    if (newSegments.length === 0) {
+      return [];
+    }
+    return [
+      {
+        ...edge,
+        segments: newSegments,
       }
-      return [
-        {
-          ...edge,
-          segments: newSegments,
-        }
-      ];
+    ];
   });
 
   return {
@@ -50,6 +50,9 @@ function filterData(d: typeof data): typeof data {
 }
 
 const fData = filterData(data);
+console.log(parseTime("05:11"));
+console.log(parseTime("05:30"));
+console.log(fData);
 
 function projectToLineSegmentFromOrigin(
   x: number,
@@ -104,16 +107,17 @@ function sqDistToLineSegment(
 }
 
 export default function Home() {
-  const latMin = 37.3;
-  const latMax = 38.1;
-  const lonMin = -122.5;
-  const lonMax = -121.7;
+  const bounds = {...fData.bounds};
+  bounds.min_lat -= 0.01;
+  bounds.max_lat += 0.01;
+  bounds.min_lon -= 0.01;
+  bounds.max_lon += 0.01;
 
   const xMax = 1200;
   const yMax = 800;
 
-  const mapLat = (lat: number) => yMax - (lat - latMin) / (latMax - latMin) * yMax;
-  const mapLon = (lon: number) => (lon - lonMin) / (lonMax - lonMin) * xMax;
+  const mapLat = (lat: number) => yMax - (lat - bounds.min_lat) / (bounds.max_lat - bounds.min_lat) * yMax;
+  const mapLon = (lon: number) => (lon - bounds.min_lon) / (bounds.max_lon - bounds.min_lon) * xMax;
 
   const vertexXy = (id: string) => {
     const v = fData.vertices[id];

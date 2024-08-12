@@ -53,6 +53,11 @@ int main(int argc, char* argv[]) {
 
   nlohmann::json result;
 
+  double minLat = 1000;
+  double maxLat = -1000;
+  double minLon = 1000;
+  double maxLon = -1000;
+
   nlohmann::json& result_vertices = result["vertices"];
   for (const std::string& stop_id : problem.stop_index_to_id) {
     nlohmann::json& vertex = result_vertices[stop_id];
@@ -60,7 +65,20 @@ int main(int argc, char* argv[]) {
     vertex["lat"] = stop.lat;
     vertex["lon"] = stop.lon;
     vertex["name"] = stop.name;
+
+    double lat = std::atof(stop.lat.c_str());
+    double lon = std::atof(stop.lon.c_str());
+    minLat = std::min(minLat, lat);
+    maxLat = std::max(maxLat, lat);
+    minLon = std::min(minLon, lon);
+    maxLon = std::max(maxLon, lon);
   }
+
+  nlohmann::json& bounds = result["bounds"];
+  bounds["min_lat"] = minLat;
+  bounds["max_lat"] = maxLat;
+  bounds["min_lon"] = minLon;
+  bounds["max_lon"] = maxLon;
 
   nlohmann::json& result_edges = result["edges"];
   for (size_t origin_stop_index = 0; origin_stop_index < problem.edges.size(); ++origin_stop_index) {

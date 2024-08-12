@@ -45,24 +45,24 @@ int main(int argc, char* argv[]) {
     readproblem(problem);
   }
 
-  // for (size_t stop_index = 0; stop_index < problem.edges.size(); ++stop_index) {
-  //   for (Edge& edge : problem.edges[stop_index]) {
-  //     std::erase_if(
-  //       edge.schedule.segments,
-  //       [](const Segment& seg) {
-  //         return seg.departure_time.seconds > 22 * 3600 || seg.arrival_time.seconds < 8 * 3600;
-  //       }
-  //     );
-  //   }
-  //   std::erase_if(
-  //     problem.edges[stop_index],
-  //     [](const Edge& edge) { return edge.schedule.segments.size() == 0 && !edge.schedule.anytime_duration.has_value(); }
-  //   );
-  //   problem.adjacency_list.edges[stop_index].clear();
-  //   for (const Edge& edge : problem.edges[stop_index]) {
-  //     problem.adjacency_list.edges[stop_index].push_back(edge.destination_stop_index);
-  //   }
-  // }
+  for (size_t stop_index = 0; stop_index < problem.edges.size(); ++stop_index) {
+    for (Edge& edge : problem.edges[stop_index]) {
+      std::erase_if(
+        edge.schedule.segments,
+        [](const Segment& seg) {
+          return seg.departure_time.seconds < 5 * 3600 + 30 * 60 || seg.arrival_time.seconds > 22 * 3600;
+        }
+      );
+    }
+    std::erase_if(
+      problem.edges[stop_index],
+      [](const Edge& edge) { return edge.schedule.segments.size() == 0 && !edge.schedule.anytime_duration.has_value(); }
+    );
+    problem.adjacency_list.edges[stop_index].clear();
+    for (const Edge& edge : problem.edges[stop_index]) {
+      problem.adjacency_list.edges[stop_index].push_back(edge.destination_stop_index);
+    }
+  }
 
   // size_t sfia = problem.stop_id_to_index["bart-place_SFIA"];
   // size_t mlbr = problem.stop_id_to_index["bart-place_MLBR"];
