@@ -51,6 +51,10 @@ target_link_libraries(Simplifier Problem)
 add_library(Solver src/Solver.cpp)
 target_link_libraries(Solver World Problem absl::flat_hash_map absl::strings)
 
+# Solver2
+add_library(Solver2 src/Solver2.cpp)
+target_link_libraries(Solver2 World Problem absl::flat_hash_map absl::strings)
+
 # Config
 add_library(Config src/Config.cpp)
 target_link_libraries(Config World absl::strings absl::time)
@@ -77,6 +81,12 @@ target_link_libraries(MultiSegment_test MultiSegment)
 target_link_libraries(MultiSegment_test rapidcheck)
 add_test(NAME MultiSegment_test COMMAND MultiSegment_test)
 set_tests_properties(MultiSegment_test PROPERTIES ENVIRONMENT "RC_PARAMS=max_success=10000")
+
+# Problem test
+add_executable(Problem_test src/Problem_test.cpp)
+target_link_libraries(Problem_test Problem gtest_main gmock_main)
+target_link_libraries(Problem_test rapidcheck)
+add_test(NAME Problem_test COMMAND Problem_test)
 
 # WalkFinder test
 add_executable(WalkFinder_test src/WalkFinder_test.cpp)
