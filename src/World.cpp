@@ -217,7 +217,8 @@ std::optional<std::string> readGTFSToWorld(
         stop_id,
         std::get<0>(arrival_time),
         std::get<0>(departure_time),
-        row["timepoint"].get<>() == "1",
+        true, // TODO
+        // row["timepoint"].get<>() == "1",
       }
     );
   }

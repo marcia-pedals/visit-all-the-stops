@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react";
-import data from "../../data/bart_viz_faster.json"
+import data from "../../data/vta_vis.json"
 
 function parseTime(time: string): number {
   return 60 * parseInt(time.substring(0, 2), 10) + parseInt(time.substring(3, 5), 10);

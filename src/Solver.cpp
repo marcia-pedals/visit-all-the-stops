@@ -122,6 +122,10 @@ static const Schedule* GetSchedule(
 struct SolverWalkVisitor {
   const Problem& problem;
 
+  std::vector<unsigned int> min_to_enter;
+  unsigned int remaining_stops_lower_bound;
+  std::vector<unsigned int> visited;
+
   unsigned int best_duration = std::numeric_limits<unsigned int>::max();
   std::vector<BestWalk> best_walks;
 
@@ -135,6 +139,10 @@ struct SolverWalkVisitor {
     // We will fill in this schedule appropriately and return.
     stack.push_back({stop_index, {}});
     SolverWalkVisitorState& state = stack.back();
+    if (visited[stop_index] == 0) {
+      remaining_stops_lower_bound -= min_to_enter[stop_index];
+    }
+    visited[stop_index] += 1;
 
     if (stack.size() == 1) {
       // This is the first stop, so we can get to it "anytime", and it takes 0 minutes.
@@ -157,10 +165,11 @@ struct SolverWalkVisitor {
     state.schedule = GetMinimalConnectingSchedule(prev_state.schedule, *schedule, min_transfer_seconds);
 
     const unsigned int captured_best_duration = best_duration;
-    std::erase_if(state.schedule.segments, [captured_best_duration](const Segment& segment) {
-      return segment.arrival_time.seconds - segment.departure_time.seconds > captured_best_duration;
+    const unsigned int captured_remaining_stops_lower_bound = remaining_stops_lower_bound;
+    std::erase_if(state.schedule.segments, [captured_best_duration, captured_remaining_stops_lower_bound](const Segment& segment) {
+      return segment.arrival_time.seconds - segment.departure_time.seconds + captured_remaining_stops_lower_bound > captured_best_duration;
     });
-    if (state.schedule.anytime_duration.has_value() && state.schedule.anytime_duration->seconds > best_duration) {
+    if (state.schedule.anytime_duration.has_value() && state.schedule.anytime_duration->seconds + captured_remaining_stops_lower_bound > best_duration) {
       state.schedule.anytime_duration = std::nullopt;
     }
 
@@ -169,6 +178,10 @@ struct SolverWalkVisitor {
   }
 
   void PopStop() {
+    visited[stack.back().stop_index] -= 1;
+    if (visited[stack.back().stop_index] == 0) {
+      remaining_stops_lower_bound += min_to_enter[stack.back().stop_index];
+    }
     stack.pop_back();
   }
 
@@ -337,6 +350,32 @@ void Solve(
   std::cout << "Solving...\n";
 
   SolverWalkVisitor visitor{.problem = problem, .best_duration = 5 * 3600 + 35 * 60};
+
+  visitor.min_to_enter = std::vector<unsigned int>(problem.edges.size(), std::numeric_limits<unsigned int>::max());
+  visitor.visited = std::vector<unsigned int>(problem.edges.size(), 0);
+  for (const std::vector<Edge>& edges : problem.edges) {
+    for (const Edge& edge : edges) {
+      if (edge.schedule.anytime_duration.has_value()) {
+        visitor.min_to_enter[edge.destination_stop_index] = std::min(
+          visitor.min_to_enter[edge.destination_stop_index],
+          edge.schedule.anytime_duration->seconds
+        );
+      }
+      for (const Segment& seg : edge.schedule.segments) {
+        visitor.min_to_enter[edge.destination_stop_index] = std::min(
+          visitor.min_to_enter[edge.destination_stop_index],
+          seg.arrival_time.seconds - seg.departure_time.seconds
+        );
+      }
+    }
+  }
+  visitor.remaining_stops_lower_bound = 0;
+  for (const unsigned int min_to_enter : visitor.min_to_enter) {
+    visitor.remaining_stops_lower_bound += min_to_enter;
+  }
+  std::cout << absl::StrCat("Initial LB: ", WorldDuration(visitor.remaining_stops_lower_bound), "\n");
+
+
   FindAllMinimalWalksDFS<SolverWalkVisitor, 64>(
     visitor,
     problem.adjacency_list,
