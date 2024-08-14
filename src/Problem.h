@@ -55,6 +55,14 @@ struct Schedule {
     return anytime_duration.value_or(WorldDuration(std::numeric_limits<unsigned int>::max()));
   }
 
+  unsigned int lower_bound() const {
+    unsigned int result = anytime_duration_or_big().seconds;
+    for (const Segment& seg : segments) {
+      result = std::min(result, seg.arrival_time.seconds - seg.departure_time.seconds);
+    }
+    return result;
+  }
+
   template<class Archive>
   void serialize(Archive& ar) {
     ar(CEREAL_NVP(segments), CEREAL_NVP(anytime_duration));

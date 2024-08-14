@@ -65,7 +65,7 @@ target_link_libraries(list_stops Config World absl::flags absl::flags_parse)
 
 # main
 add_executable(main src/main.cpp)
-target_link_libraries(main Config MultiSegment World Solver Simplifier absl::flags absl::flags_parse)
+target_link_libraries(main Config MultiSegment World Solver Solver2 Simplifier absl::flags absl::flags_parse)
 
 # dump_problem_graph
 add_executable(dump_problem_graph src/dump_problem_graph.cpp)
@@ -87,6 +87,12 @@ add_executable(Problem_test src/Problem_test.cpp)
 target_link_libraries(Problem_test Problem gtest_main gmock_main)
 target_link_libraries(Problem_test rapidcheck)
 add_test(NAME Problem_test COMMAND Problem_test)
+
+# Solver2 test
+add_executable(Solver2_test src/Solver2_test.cpp)
+target_link_libraries(Solver2_test Solver2 gtest_main gmock_main)
+target_link_libraries(Solver2_test rapidcheck)
+add_test(NAME Solver2_test COMMAND Solver2_test)
 
 # WalkFinder test
 add_executable(WalkFinder_test src/WalkFinder_test.cpp)
